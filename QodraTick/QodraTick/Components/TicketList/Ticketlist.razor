@@ -1,0 +1,40 @@
+﻿@page "/ticketlist"
+@using Data.Context
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Support")]
+@inject ApplicationDbContext DbContext
+
+<h3>لیست تیکت‌ها</h3>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>موضوع</th>
+            <th>اولویت</th>
+            <th>دسته‌بندی</th>
+            <th>زمان ایجاد</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var ticket in tickets)
+        {
+            <tr>
+                <td>@ticket.Subject</td>
+                <td>@ticket.Priority</td>
+                <td>@ticket.Category</td>
+                <td>@ticket.CreatedAt</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Ticket> tickets = new List<Ticket>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        tickets = await DbContext.Tickets
+            .Where(t => t.Status == "Open")
+            .ToListAsync();
+    }
+}

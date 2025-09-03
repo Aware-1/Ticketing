@@ -1,0 +1,71 @@
+﻿@page "/createticket"
+@using Data.Context
+@using Data.DTO
+@using Data.Model
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Regular")]
+@inject ApplicationDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<h3>ثبت تیکت جدید</h3>
+
+<EditForm Model="@ticketModel" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>موضوع</label>
+        <InputText @bind-Value="ticketModel.Subject" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label>توضیحات</label>
+        <textarea id="tinymce" @bind="ticketModel.Description"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label>اولویت</label>
+        <InputSelect @bind-Value="ticketModel.Priority" class="form-control">
+            <option value="Low">کم</option>
+            <option value="Medium">متوسط</option>
+            <option value="High">زیاد</option>
+        </InputSelect>
+    </div>
+
+    <div class="form-group">
+        <label>دسته‌بندی</label>
+        <InputSelect @bind-Value="ticketModel.Category" class="form-control">
+            <option value="Hardware">سخت‌افزار</option>
+            <option value="Software">نرم‌افزار</option>
+        </InputSelect>
+    </div>
+
+    <button type="submit" class="btn btn-primary">ثبت تیکت</button>
+</EditForm>
+
+@code {
+    private TicketDTO ticketModel = new TicketDTO();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // تنظیم TinyMCE
+        await JSRuntime.InvokeVoidAsync("initTinyMCE");
+    }
+
+    private async Task HandleSubmit()
+    {
+        var userId = /* استخراج UserId از هویت کاربر (مثلاً از Claims) */;
+        var ticket = new Ticket
+        {
+            Subject = ticketModel.Subject,
+            Description = ticketModel.Description,
+            Priority = ticketModel.Priority,
+            Category = ticketModel.Category,
+            CreatedByUserId = userId,
+            Status = "Open"
+        };
+        DbContext.Tickets.Add(ticket);
+        await DbContext.SaveChangesAsync();
+        NavigationManager.NavigateTo("/mytickets");
+    }
+}
