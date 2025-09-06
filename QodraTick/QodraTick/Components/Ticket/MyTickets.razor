@@ -1,0 +1,166 @@
+﻿@page "/tickets/my"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+
+<PageTitle>تیکت‌های من</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">تیکت‌های من</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/tickets/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>
+            تیکت جدید
+        </a>
+    </div>
+</div>
+
+@if (tickets == null)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">در حال بارگذاری...</span>
+        </div>
+    </div>
+}
+else if (!tickets.Any())
+{
+    <div class="alert alert-info text-center">
+        <h4>هنوز تیکتی ثبت نکرده‌اید</h4>
+        <p>برای ثبت اولین تیکت خود، روی دکمه "تیکت جدید" کلیک کنید.</p>
+        <a href="/tickets/create" class="btn btn-primary">ثبت تیکت جدید</a>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>شماره</th>
+                    <th>موضوع</th>
+                    <th>وضعیت</th>
+                    <th>اولویت</th>
+                    <th>دسته‌بندی</th>
+                    <th>تاریخ ایجاد</th>
+                    <th>آخرین فعالیت</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ticket in tickets)
+                {
+                    <tr class="@GetTicketRowClass(ticket.Status)">
+                        <td>@ticket.Id</td>
+                        <td>
+                            <strong>@ticket.Subject</strong>
+                            @if (ticket.AssignedToUser != null)
+                            {
+                                <br>
+                    
+                                <small class="text-muted">پشتیبان: @ticket.AssignedToUser.DisplayName</small>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @GetStatusBadgeClass(ticket.Status)">
+                                @GetStatusText(ticket.Status)
+                            </span>
+                        </td>
+                        <td>
+                            <span class="@GetPriorityClass(ticket.Priority)">
+                                @GetPriorityText(ticket.Priority)
+                            </span>
+                        </td>
+                        <td>@GetCategoryText(ticket.Category)</td>
+                        <td>@ticket.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
+                        <td>@ticket.LastActivityAt.ToString("yyyy/MM/dd HH:mm")</td>
+                        <td>
+                            <a href="/tickets/@ticket.Id" class="btn btn-sm btn-outline-primary">
+                                @if (ticket.Status == TicketStatus.Open)
+                                {
+                                    <i class="bi bi-eye me-1"></i>
+                                    مشاهده
+                                                        }
+                                else
+                                {
+                                    <i class="bi bi-chat me-1"></i>
+                                    چت
+                                                }
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Ticket>? tickets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await UserService.GetCurrentUserAsync();
+        if (currentUser != null)
+        {
+            tickets = await DbContext.Tickets
+                .Include(t => t.AssignedToUser)
+                .Where(t => t.CreatedByUserId == currentUser.Id)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+    }
+
+    private string GetTicketRowClass(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "ticket-open",
+        TicketStatus.InProgress => "ticket-progress",
+        TicketStatus.Closed => "ticket-closed",
+        TicketStatus.Rejected => "ticket-rejected",
+        _ => ""
+    };
+
+    private string GetStatusBadgeClass(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "bg-warning",
+        TicketStatus.InProgress => "bg-info",
+        TicketStatus.Closed => "bg-success",
+        TicketStatus.Rejected => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetStatusText(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "باز",
+        TicketStatus.InProgress => "در حال بررسی",
+        TicketStatus.Closed => "بسته شده",
+        TicketStatus.Rejected => "رد شده",
+        _ => "نامشخص"
+    };
+
+    private string GetPriorityClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "priority-low",
+        TicketPriority.Normal => "priority-normal",
+        TicketPriority.High => "priority-high",
+        TicketPriority.Critical => "priority-critical",
+        _ => ""
+    };
+
+    private string GetPriorityText(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "کم",
+        TicketPriority.Normal => "عادی",
+        TicketPriority.High => "بالا",
+        TicketPriority.Critical => "اورژانس",
+        _ => "نامشخص"
+    };
+
+    private string GetCategoryText(TicketCategory category) => category switch
+    {
+        TicketCategory.Hardware => "سخت‌افزار",
+        TicketCategory.Software => "نرم‌افزار",
+        _ => "نامشخص"
+    };
+}

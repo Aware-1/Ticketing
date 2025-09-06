@@ -42,7 +42,6 @@ namespace Service.Service
                 {
                     Username = username,
                     DisplayName = displayName,
-                //error    /*Email = email,*/
                     Role = UserRole.User // Default role
                 };
                 _context.Users.Add(user);
@@ -50,7 +49,6 @@ namespace Service.Service
             else
             {
                 user.DisplayName = displayName;
-                //error  user.Email = email;
                 _context.Users.Update(user);
             }
 

@@ -1,0 +1,128 @@
+﻿@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="bi bi-plus-circle-fill text-primary" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">ایجاد تیکت</h5>
+                <p class="card-text">مشکل جدید خود را گزارش دهید</p>
+                <a href="/tickets/create" class="btn btn-primary">ثبت تیکت</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="bi bi-list-ul text-info" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">تیکت‌های من</h5>
+                <p class="card-text">@openTicketsCount تیکت باز دارید</p>
+                <a href="/tickets/my" class="btn btn-info">مشاهده همه</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">تیکت‌های حل شده</h5>
+                <p class="card-text">@closedTicketsCount تیکت بسته شده</p>
+                <a href="/tickets/my" class="btn btn-success">نمایش آرشیو</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-secondary">
+            <div class="card-body">
+                <i class="bi bi-question-circle-fill text-secondary" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">سوالات متداول</h5>
+                <p class="card-text">پاسخ سوالات رایج</p>
+                <a href="/faq" class="btn btn-secondary">مطالعه</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (recentTickets?.Any() == true)
+{
+    <div class="mt-4">
+        <h4>آخرین تیکت‌های شما</h4>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>موضوع</th>
+                        <th>وضعیت</th>
+                        <th>تاریخ</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ticket in recentTickets.Take(5))
+                    {
+                        <tr>
+                            <td>@ticket.Subject</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(ticket.Status)">
+                                    @GetStatusText(ticket.Status)
+                                </span>
+                            </td>
+                            <td>@ticket.CreatedAt.ToString("yyyy/MM/dd")</td>
+                            <td>
+                                <a href="/tickets/@ticket.Id" class="btn btn-sm btn-outline-primary">
+                                    مشاهده
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private int openTicketsCount = 0;
+    private int closedTicketsCount = 0;
+    private List<Ticket>? recentTickets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await UserService.GetCurrentUserAsync();
+        if (currentUser != null)
+        {
+            var userTickets = await DbContext.Tickets
+                .Where(t => t.CreatedByUserId == currentUser.Id)
+                .ToListAsync();
+
+            openTicketsCount = userTickets.Count(t => t.Status == TicketStatus.Open || t.Status == TicketStatus.InProgress);
+            closedTicketsCount = userTickets.Count(t => t.Status == TicketStatus.Closed);
+
+            recentTickets = userTickets
+                .OrderByDescending(t => t.CreatedAt)
+                .ToList();
+        }
+    }
+
+    private string GetStatusBadgeClass(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "bg-warning",
+        TicketStatus.InProgress => "bg-info",
+        TicketStatus.Closed => "bg-success",
+        TicketStatus.Rejected => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetStatusText(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "باز",
+        TicketStatus.InProgress => "در حال بررسی",
+        TicketStatus.Closed => "بسته شده",
+        TicketStatus.Rejected => "رد شده",
+        _ => "نامشخص"
+    };
+}

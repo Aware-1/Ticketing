@@ -1,0 +1,58 @@
+﻿// Components/TinyMceEditor.razor
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<div class="mb-3">
+    <textarea id="@EditorId" class="form-control">@Value</textarea>
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Height { get; set; } = "300px";
+    [Parameter] public bool AllowImageUpload { get; set; } = true;
+
+    private string EditorId = $"editor_{Guid.NewGuid():N}";
+    private bool isInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("initializeTinyMCE", EditorId, DotNetObjectReference.Create(this), new
+                {
+                    height = Height,
+                    allowImageUpload = AllowImageUpload,
+                    initialValue = Value
+                });
+                isInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"خطا در راه‌اندازی TinyMCE: {ex.Message}");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnContentChanged(string content)
+    {
+        Value = content;
+        await ValueChanged.InvokeAsync(content);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (isInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("destroyEditor", EditorId);
+            }
+            catch { /* Ignore cleanup errors */ }
+        }
+    }
+}

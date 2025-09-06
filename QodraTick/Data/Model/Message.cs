@@ -10,6 +10,7 @@ namespace Data.Model
         public int Id { get; set; }
 
         [Required]
+        [Column(TypeName = "nvarchar(max)")]
         public string Content { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -23,6 +24,5 @@ namespace Data.Model
         // Navigation Properties
         public virtual Ticket Ticket { get; set; } = null!;
         public virtual User User { get; set; } = null!;
-        public virtual ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();
     }
 }

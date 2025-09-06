@@ -20,6 +20,9 @@ builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
+    options.AddPolicy("UserOnly", policy =>
+        policy.RequireAuthenticatedUser());
+
     options.AddPolicy("SupportOnly", policy =>
         policy.RequireAssertion(context =>
             context.User.IsInRole("Support") || context.User.IsInRole("Admin")));
@@ -48,12 +51,20 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-
+app.UseStaticFiles();
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+app.UseAuthentication();
+app.UseAuthorization();
+
+//app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
 
 app.Run();

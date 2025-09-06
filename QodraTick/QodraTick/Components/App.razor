@@ -9,13 +9,27 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["QodraTick.styles.css"]" />
     <ImportMap />
+    <script src="https://cdn.tiny.cloud/1/YOUR_API_KEY/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
+
+    <style>
+        body { font-family: Tahoma, Arial, sans-serif; }
+        .ticket-open { background-color: #fff3cd; }
+        .ticket-progress { background-color: #d1ecf1; }
+        .ticket-closed { background-color: #d4edda; }
+        .ticket-rejected { background-color: #f8d7da; }
+        .priority-low { border-right: 4px solid #28a745; }
+        .priority-normal { border-right: 4px solid #007bff; }
+        .priority-high { border-right: 4px solid #ffc107; }
+        .priority-critical { border-right: 4px solid #dc3545; }
+    </style>
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
+    <script src="js/tinymce-helper.js"></script>
 </body>
 
 </html>

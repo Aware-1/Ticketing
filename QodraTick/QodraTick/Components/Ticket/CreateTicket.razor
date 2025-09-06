@@ -1,0 +1,155 @@
+﻿@page "/tickets/create"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject NavigationManager Navigation
+@inject IUserService UserService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>ایجاد تیکت جدید</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">ایجاد تیکت جدید</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <EditForm Model="@ticketModel" OnValidSubmit="HandleSubmit" FormName="CreateTicketForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="alert alert-danger" />
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label">موضوع تیکت *</label>
+                <InputText @bind-Value="ticketModel.Subject" class="form-control" placeholder="موضوع تیکت خود را وارد کنید" />
+                <ValidationMessage For="@(() => ticketModel.Subject)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">اولویت *</label>
+                <InputSelect @bind-Value="ticketModel.Priority" class="form-select">
+                    <option value="">-- انتخاب کنید --</option>
+                    <option value="Low">کم</option>
+                    <option value="Normal">عادی</option>
+                    <option value="High">بالا</option>
+                    <option value="Critical">اورژانس</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => ticketModel.Priority)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">دسته‌بندی *</label>
+                <InputSelect @bind-Value="ticketModel.Category" class="form-select">
+                    <option value="">-- انتخاب کنید --</option>
+                    <option value="Hardware">سخت‌افزار</option>
+                    <option value="Software">نرم‌افزار</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => ticketModel.Category)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">شرح مسئله *</label>
+                <TinyMceEditor @bind-Value="ticketModel.Description" Height="400px" AllowImageUpload="true" />
+                <ValidationMessage For="@(() => ticketModel.Description)" />
+                <div class="form-text">می‌توانید از متن فرمت‌دار و عکس استفاده کنید</div>
+            </div>
+
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>در حال ثبت...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span>ثبت تیکت</span>
+                    }
+                </button>
+                <a href="/tickets/my" class="btn btn-secondary me-2">انصراف</a>
+            </div>
+        </EditForm>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>راهنما</h5>
+            </div>
+            <div class="card-body">
+                <small>
+                    <ul>
+                        <li>موضوع را به صورت خلاصه و واضح بنویسید</li>
+                        <li>در شرح مسئله، جزئیات کامل را ارائه دهید</li>
+                        <li>اولویت مناسب را انتخاب کنید</li>
+                        <li>دسته‌بندی صحیح به سرعت پاسخ‌گویی کمک می‌کند</li>
+                    </ul>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private TicketDTO ticketModel = new();
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var currentUser = await UserService.GetCurrentUserAsync();
+            if (currentUser == null)
+            {
+                errorMessage = "کاربر یافت نشد. لطفاً مجدداً وارد شوید.";
+                return;
+            }
+
+            // تبدیل string به enum
+            if (!Enum.TryParse<TicketPriority>(ticketModel.Priority, out var priority))
+            {
+                errorMessage = "اولویت انتخابی نامعتبر است.";
+                return;
+            }
+
+            if (!Enum.TryParse<TicketCategory>(ticketModel.Category, out var category))
+            {
+                errorMessage = "دسته‌بندی انتخابی نامعتبر است.";
+                return;
+            }
+
+            var ticket = new Ticket
+            {
+                Subject = ticketModel.Subject,
+                Description = ticketModel.Description,
+                Priority = priority,
+                Category = category,
+                CreatedByUserId = currentUser.Id,
+                Status = TicketStatus.Open
+            };
+
+            DbContext.Tickets.Add(ticket);
+            await DbContext.SaveChangesAsync();
+
+            await JSRuntime.InvokeVoidAsync("alert", "تیکت با موفقیت ثبت شد!");
+            Navigation.NavigateTo("/tickets/my");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطا در ثبت تیکت: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

@@ -1,6 +1,36 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+﻿@* <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
-</Router>
+</Router> *@
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <div class="container mt-4">
+                        <div class="alert alert-warning text-center">
+                            <h3>دسترسی محدود</h3>
+                            <p>برای استفاده از این بخش باید وارد شوید.</p>
+                            <p>لطفاً از اعتبارسنجی Active Directory استفاده کنید.</p>
+                        </div>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>صفحه یافت نشد</PageTitle>
+            <LayoutView Layout="typeof(Layout.MainLayout)">
+                <div class="container mt-4">
+                    <div class="alert alert-danger text-center">
+                        <h3>صفحه یافت نشد</h3>
+                        <p>متأسفانه صفحه مورد نظر یافت نشد.</p>
+                        <a href="/" class="btn btn-primary">بازگشت به صفحه اصلی</a>
+                    </div>
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
