@@ -1,0 +1,114 @@
+﻿@page "/faq"
+@rendermode InteractiveServer
+
+<PageTitle>سوالات متداول</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">سوالات متداول</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-10">
+        <div class="accordion" id="faqAccordion">
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1">
+                        چگونه تیکت جدید ثبت کنم؟
+                    </button>
+                </h2>
+                <div id="collapse1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        برای ثبت تیکت جدید، از منوی سمت راست گزینه "ایجاد تیکت" را انتخاب کنید. سپس موضوع، اولویت، دسته‌بندی و شرح کاملی از مسئله خود ارائه دهید.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2">
+                        چه مدت طول می‌کشد تا تیکت من پاسخ داده شود؟
+                    </button>
+                </h2>
+                <div id="collapse2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        زمان پاسخ‌گویی بستگی به اولویت تیکت شما دارد:
+                        <ul class="mt-2">
+                            <li><strong>اورژانس:</strong> حداکثر 2 ساعت</li>
+                            <li><strong>بالا:</strong> حداکثر 4 ساعت</li>
+                            <li><strong>عادی:</strong> حداکثر 24 ساعت</li>
+                            <li><strong>کم:</strong> حداکثر 48 ساعت</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3">
+                        چگونه وضعیت تیکت خود را پیگیری کنم؟
+                    </button>
+                </h2>
+                <div id="collapse3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        می‌توانید از بخش "تیکت‌های من" وضعیت تمامی تیکت‌های خود را مشاهده کنید. همچنین با کلیک روی هر تیکت، می‌توانید جزئیات و تاریخچه مکالمات را ببینید.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse4">
+                        آیا می‌توانم فایل ضمیمه کنم؟
+                    </button>
+                </h2>
+                <div id="collapse4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        بله، می‌توانید در متن تیکت عکس‌ها را مستقیماً درج کنید. برای سایر فایل‌ها از بخش ضمیمه استفاده کنید. فرمت‌های مجاز: JPG, PNG, PDF, DOC, TXT
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse5">
+                        چگونه با پشتیبان چت کنم؟
+                    </button>
+                </h2>
+                <div id="collapse5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        زمانی که تیکت شما توسط پشتیبان اکسپت شد، می‌توانید وارد صفحه تیکت شوید و در بخش چت با پشتیبان ارتباط برقرار کنید.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse6">
+                        مسئله من حل شد، چه کار کنم؟
+                    </button>
+                </h2>
+                <div id="collapse6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        اگر مسئله شما حل شد، پشتیبان تیکت را بسته خواهد کرد. در صورتی که نیاز به پیگیری دارید، می‌توانید در همان تیکت پیام جدید ارسال کنید.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mt-5">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h5>سوال خود را پیدا نکردید؟</h5>
+                    <p>برای سوالات بیشتر، تیکت جدید ثبت کنید یا با بخش پشتیبانی تماس بگیرید.</p>
+                    <a href="/tickets/create" class="btn btn-primary">ثبت تیکت جدید</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // کدی نیاز نیست - صفحه استاتیک است
+}

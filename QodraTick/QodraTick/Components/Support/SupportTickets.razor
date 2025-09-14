@@ -1,0 +1,190 @@
+﻿@page "/support/tickets"
+@attribute [Authorize(Policy = "SupportOnly")]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+
+<PageTitle>تیکت‌های باز</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">تیکت‌های باز</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-outline-secondary" @onclick="RefreshList">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            تازه‌سازی
+        </button>
+    </div>
+</div>
+
+@if (tickets == null)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">در حال بارگذاری...</span>
+        </div>
+    </div>
+}
+else if (!tickets.Any())
+{
+    <div class="alert alert-info text-center">
+        <h4>تیکت باز موجود نیست</h4>
+        <p>همه تیکت‌ها پاسخ داده شده‌اند. عالی!</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>شماره</th>
+                    <th>موضوع</th>
+                    <th>کاربر</th>
+                    <th>اولویت</th>
+                    <th>دسته‌بندی</th>
+                    <th>زمان ایجاد</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ticket in tickets)
+                {
+                    <tr class="@GetTicketRowClass(ticket.Priority)">
+                        <td>@ticket.Id</td>
+                        <td>
+                            <strong>@ticket.Subject</strong>
+                            <br>
+                            <small class="text-muted">
+                                @((MarkupString)TruncateHtml(ticket.Description, 50))
+                            </small>
+                        </td>
+                        <td>@ticket.CreatedByUser.DisplayName</td>
+                        <td>
+                            <span class="badge @GetPriorityBadgeClass(ticket.Priority)">
+                                @GetPriorityText(ticket.Priority)
+                            </span>
+                        </td>
+                        <td>@GetCategoryText(ticket.Category)</td>
+                        <td>@ticket.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" @onclick="() => AcceptTicket(ticket.Id)" disabled="@isAccepting">
+                                @if (acceptingTicketId == ticket.Id && isAccepting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-circle me-1"></i>
+                                }
+                                اکسپت
+                            </button>
+                            <a href="/tickets/@ticket.Id" class="btn btn-sm btn-outline-secondary me-1">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Ticket>? tickets;
+    private bool isAccepting = false;
+    private int acceptingTicketId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTickets();
+    }
+
+    private async Task LoadTickets()
+    {
+        tickets = await DbContext.Tickets
+            .Include(t => t.CreatedByUser)
+            .Where(t => t.Status == TicketStatus.Open)
+            .OrderByDescending(t => t.Priority)
+            .ThenBy(t => t.CreatedAt)
+            .ToListAsync();
+    }
+
+    private async Task RefreshList()
+    {
+        await LoadTickets();
+        StateHasChanged();
+    }
+
+    private async Task AcceptTicket(int ticketId)
+    {
+        isAccepting = true;
+        acceptingTicketId = ticketId;
+
+        try
+        {
+            var currentUser = await UserService.GetCurrentUserAsync();
+            if (currentUser == null) return;
+
+            var ticket = await DbContext.Tickets.FindAsync(ticketId);
+            if (ticket != null && ticket.Status == TicketStatus.Open)
+            {
+                ticket.Status = TicketStatus.InProgress;
+                ticket.AssignedToUserId = currentUser.Id;
+                ticket.AssignedAt = DateTime.UtcNow;
+                ticket.LastActivityAt = DateTime.UtcNow;
+
+                await DbContext.SaveChangesAsync();
+                await LoadTickets();
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            isAccepting = false;
+            acceptingTicketId = 0;
+        }
+    }
+
+    private string GetTicketRowClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Critical => "table-danger",
+        TicketPriority.High => "table-warning",
+        TicketPriority.Normal => "",
+        TicketPriority.Low => "table-light",
+        _ => ""
+    };
+
+    private string GetPriorityBadgeClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "bg-success",
+        TicketPriority.Normal => "bg-primary",
+        TicketPriority.High => "bg-warning text-dark",
+        TicketPriority.Critical => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetPriorityText(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "کم",
+        TicketPriority.Normal => "عادی",
+        TicketPriority.High => "بالا",
+        TicketPriority.Critical => "اورژانس",
+        _ => "نامشخص"
+    };
+
+    private string GetCategoryText(TicketCategory category) => category switch
+    {
+        TicketCategory.Hardware => "سخت‌افزار",
+        TicketCategory.Software => "نرم‌افزار",
+        _ => "نامشخص"
+    };
+
+    private string TruncateHtml(string html, int maxLength)
+    {
+        if (string.IsNullOrEmpty(html)) return "";
+
+        // Remove HTML tags for preview
+        var plainText = System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", "");
+        return plainText.Length <= maxLength ? plainText : plainText.Substring(0, maxLength) + "...";
+    }
+}
