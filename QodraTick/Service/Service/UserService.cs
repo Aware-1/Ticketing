@@ -19,61 +19,61 @@ namespace Service.Service
 
         public async Task<User?> GetCurrentUserAsync()
         {
-            var username = _httpContextAccessor.HttpContext?.User?.Identity?.Name;
-            if (string.IsNullOrEmpty(username))
-                return null;
+            var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst("UserId")?.Value;
+            if (int.TryParse(userIdClaim, out int userId))
+            {
+                return await GetUserByIdAsync(userId);
+            }
+            return null;
+        }
 
-            return await GetUserByUsernameAsync(username);
+        public async Task<User?> LoginAsync(string username, string password)
+        {
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
+
+            //if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
+            //{
+            //    return user;
+            //}
+
+            return null;
+        }
+
+        public async Task<User?> GetUserByIdAsync(int id)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == id && u.IsActive);
         }
 
         public async Task<User?> GetUserByUsernameAsync(string username)
         {
             return await _context.Users
+                .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
-        }
-
-        public async Task<User> CreateOrUpdateUserAsync(string username, string displayName, string email)
-        {
-            var user = await GetUserByUsernameAsync(username);
-
-            if (user == null)
-            {
-                user = new User
-                {
-                    Username = username,
-                    DisplayName = displayName,
-                    Role = UserRole.User // Default role
-                };
-                _context.Users.Add(user);
-            }
-            else
-            {
-                user.DisplayName = displayName;
-                _context.Users.Update(user);
-            }
-
-            await _context.SaveChangesAsync();
-            return user;
-        }
-
-        public async Task<bool> HasRoleAsync(string username, UserRole role)
-        {
-            var user = await GetUserByUsernameAsync(username);
-            return user?.Role == role;
         }
 
         public async Task<List<User>> GetSupportUsersAsync()
         {
             return await _context.Users
-                .Where(u => u.Role == UserRole.Support && u.IsActive)
+                .Include(u => u.Role)
+                .Where(u => u.Role.Name == "Support" && u.IsActive)
                 .ToListAsync();
         }
 
         public async Task<List<User>> GetAdminUsersAsync()
         {
             return await _context.Users
-                .Where(u => u.Role == UserRole.Admin && u.IsActive)
+                .Include(u => u.Role)
+                .Where(u => u.Role.Name == "Admin" && u.IsActive)
                 .ToListAsync();
+        }
+
+        public async Task<List<Role>> GetRolesAsync()
+        {
+            return await _context.Roles.ToListAsync();
         }
     }
 }

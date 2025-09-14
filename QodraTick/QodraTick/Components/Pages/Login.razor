@@ -1,0 +1,144 @@
+﻿@page "/login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+@rendermode InteractiveServer
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>ورود - قدرا تیک</PageTitle>
+
+<div class="row justify-content-center min-vh-100 align-items-center">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header text-center bg-primary text-white">
+                <h3>ورود به سیستم</h3>
+                <small>سیستم مدیریت تیکت قدرا</small>
+            </div>
+            <div class="card-body">
+                <EditForm Model="@loginModel" OnValidSubmit="HandleLogin" FormName="LoginForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="alert alert-danger" />
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">نام کاربری</label>
+                        <InputText @bind-Value="loginModel.Username" class="form-control" placeholder="admin" />
+                        <ValidationMessage For="@(() => loginModel.Username)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">رمز عبور</label>
+                        <InputText type="password" @bind-Value="loginModel.Password" class="form-control" placeholder="admin123" />
+                        <ValidationMessage For="@(() => loginModel.Password)" />
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" />
+                        <label class="form-check-label">مرا به خاطر بسپار</label>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>در حال ورود...</span>
+                            }
+                            else
+                            {
+                                <span>ورود</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>کاربران پیش‌فرض:</strong><br>
+                        admin / admin123 (مدیر)<br>
+                        support / support123 (پشتیبان)<br>
+                        user / user123 (کاربر عادی)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "نام کاربری الزامی است")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "رمز عبور الزامی است")]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; } = false;
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var user = await UserService.LoginAsync(loginModel.Username, loginModel.Password);
+
+            if (user != null)
+            {
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim("DisplayName", user.DisplayName),
+                    new Claim(ClaimTypes.Role, user.Role.Name),
+                    new Claim("UserId", user.Id.ToString())
+                };
+
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+                var authProperties = new AuthenticationProperties
+                {
+                    IsPersistent = loginModel.RememberMe,
+                    ExpiresUtc = loginModel.RememberMe ? DateTimeOffset.UtcNow.AddDays(7) : DateTimeOffset.UtcNow.AddHours(1)
+                };
+
+                await JSRuntime.InvokeVoidAsync("localStorage.clear");
+                await Task.Delay(100);
+
+                // ایجاد HttpContext و Authentication
+                var httpContext = new DefaultHttpContext();
+                await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal, authProperties);
+
+                Navigation.NavigateTo("/", true);
+            }
+            else
+            {
+                errorMessage = "نام کاربری یا رمز عبور اشتباه است.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطا در ورود: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

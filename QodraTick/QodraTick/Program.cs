@@ -1,4 +1,5 @@
 using Data.Context;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using QodraTick.Components;
 using Service.IService;
@@ -14,22 +15,19 @@ builder.Services.AddRazorComponents()
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Active Directory Authentication
-builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
-    .AddNegotiate();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    });
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("UserOnly", policy =>
-        policy.RequireAuthenticatedUser());
-
-    options.AddPolicy("SupportOnly", policy =>
-        policy.RequireAssertion(context =>
-            context.User.IsInRole("Support") || context.User.IsInRole("Admin")));
-
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireAssertion(context =>
-            context.User.IsInRole("Admin")));
+    options.AddPolicy("UserOnly", policy => policy.RequireAuthenticatedUser());
+    options.AddPolicy("SupportOnly", policy => policy.RequireRole("Support", "Admin"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
 });
 
 // Services
@@ -57,14 +55,7 @@ app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 
-//app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
-if (!Directory.Exists(uploadsPath))
-{
-    Directory.CreateDirectory(uploadsPath);
-}
 
 app.Run();

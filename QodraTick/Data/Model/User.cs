@@ -31,13 +31,23 @@ namespace Data.Model
         [StringLength(200)]
         public string DisplayName { get; set; } = string.Empty;
 
-        public UserRole Role { get; set; } = UserRole.User;
+        [Required]
+        [StringLength(255)]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Password { get; set; } = string.Empty; // Hash شده
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsActive { get; set; } = true;
 
+        // Foreign Key
+        public int RoleId { get; set; } = 1; // Default User role
+
         // Navigation Properties
+        public virtual Role Role { get; set; } = null!;
         public virtual ICollection<Ticket> CreatedTickets { get; set; } = new List<Ticket>();
         public virtual ICollection<Ticket> AssignedTickets { get; set; } = new List<Ticket>();
         public virtual ICollection<Message> Messages { get; set; } = new List<Message>();

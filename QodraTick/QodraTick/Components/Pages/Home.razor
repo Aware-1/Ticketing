@@ -9,35 +9,35 @@
     <h1 class="h2">داشبورد</h1>
 </div>
 
-@if (currentUser != null)
-{
-    @switch (currentUser.Role)
-    {
-        case UserRole.User:
-            <UserDashboard />
-            break;
-        case UserRole.Support:
-            <SupportDashboard />
-            break;
-        case UserRole.Admin:
-            <AdminDashboard />
-            break;
-    }
-}
-else
-{
-    <div class="d-flex justify-content-center">
-        <div class="spinner-border" role="status">
-            <span class="visually-hidden">در حال بارگذاری...</span>
+<AuthorizeView>
+    <Authorized>
+        @{
+            var userRole = context.User.FindFirst(ClaimTypes.Role)?.Value;
+        }
+        @switch (userRole)
+        {
+            case "User":
+                <UserDashboard />
+                break;
+            case "Support":
+                <SupportDashboard />
+                break;
+            case "Admin":
+                <AdminDashboard />
+                break;
+            default:
+                <div class="alert alert-warning">
+                    <h4>خوش آمدید!</h4>
+                    <p>نقش کاربری شما تشخیص داده نشد. لطفاً با مدیر سیستم تماس بگیرید.</p>
+                </div>
+                break;
+        }
+    </Authorized>
+    <NotAuthorized>
+        <div class="text-center">
+            <h3>به سیستم قدرا تیک خوش آمدید</h3>
+            <p>برای استفاده از سیستم لطفاً وارد شوید.</p>
+            <a href="/login" class="btn btn-primary">ورود به سیستم</a>
         </div>
-    </div>
-}
-
-@code {
-    private User? currentUser;
-
-    protected override async Task OnInitializedAsync()
-    {
-        currentUser = await UserService.GetCurrentUserAsync();
-    }
-}
+    </NotAuthorized>
+</AuthorizeView>
