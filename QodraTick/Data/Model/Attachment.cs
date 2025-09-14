@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Model
 {
-    [Table("Attachment")]
+    [Table("Attachments")]
     public class Attachment
     {
         [Key]
@@ -24,8 +24,11 @@ namespace Data.Model
 
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
-        // Foreign Keys - فقط برای تیکت
+        // Foreign Keys با DataAnnotation - فقط برای تیکت
+        [ForeignKey(nameof(Ticket))]
         public int TicketId { get; set; }
+
+        [ForeignKey(nameof(UploadedByUser))]
         public int UploadedByUserId { get; set; }
 
         // Navigation Properties

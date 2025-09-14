@@ -24,7 +24,8 @@ public enum TicketCategory
     Hardware = 0,   // سخت‌افزار
     Software = 1    // نرم‌افزار
 }
-[Table("Ticket")]
+
+[Table("Tickets")]
 public class Ticket
 {
     [Key]
@@ -35,7 +36,8 @@ public class Ticket
     public string Subject { get; set; } = string.Empty;
 
     [Required]
-    public string Description { get; set; } = string.Empty; // Rich Text
+    [Column(TypeName = "nvarchar(max)")]
+    public string Description { get; set; } = string.Empty; // HTML from TinyMCE
 
     public TicketStatus Status { get; set; } = TicketStatus.Open;
 
@@ -51,9 +53,14 @@ public class Ticket
 
     public DateTime LastActivityAt { get; set; } = DateTime.UtcNow;
 
-    // Foreign Keys
+    // Foreign Keys با DataAnnotation
+    [ForeignKey(nameof(CreatedByUser))]
     public int CreatedByUserId { get; set; }
+
+    [ForeignKey(nameof(AssignedToUser))]
     public int? AssignedToUserId { get; set; }
+
+    [ForeignKey(nameof(ClosedByUser))]
     public int? ClosedByUserId { get; set; }
 
     // Navigation Properties

@@ -29,14 +29,15 @@ namespace Service.Service
 
         public async Task<User?> LoginAsync(string username, string password)
         {
+            // Plain text password comparison فعلاً
             var user = await _context.Users
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
 
-            //if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
-            //{
-            //    return user;
-            //}
+            if (user != null && user.Password == password)
+            {
+                return user;
+            }
 
             return null;
         }

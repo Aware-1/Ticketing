@@ -19,95 +19,101 @@ namespace Data.Context
         {
             base.OnModelCreating(modelBuilder);
 
-            // User Configuration
-            modelBuilder.Entity<User>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasIndex(e => e.Username).IsUnique();
+            // Seed Roles
+            modelBuilder.Entity<Role>().HasData(
+                new Role { Id = 1, Name = "User", Description = "کاربر عادی", CreatedAt = DateTime.UtcNow },
+                new Role { Id = 2, Name = "Support", Description = "پشتیبان", CreatedAt = DateTime.UtcNow },
+                new Role { Id = 3, Name = "Admin", Description = "مدیر", CreatedAt = DateTime.UtcNow }
+            );
 
-                entity.Property(e => e.Role)
-                    .HasConversion<int>();
-            });
+            // Seed Users (بدون رمزنگاری فعلاً)
+            modelBuilder.Entity<User>().HasData(
+                new User
+                {
+                    Id = 1,
+                    Username = "admin",
+                    DisplayName = "مدیر سیستم",
+                    Email = "admin@company.com",
+                    Password = "admin123", // Plain text فعلاً
+                    RoleId = 3, // Admin
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new User
+                {
+                    Id = 2,
+                    Username = "support1",
+                    DisplayName = "پشتیبان اول",
+                    Email = "support1@company.com",
+                    Password = "support123",
+                    RoleId = 2, // Support
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new User
+                {
+                    Id = 3,
+                    Username = "support2",
+                    DisplayName = "پشتیبان دوم",
+                    Email = "support2@company.com",
+                    Password = "support123",
+                    RoleId = 2, // Support
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new User
+                {
+                    Id = 4,
+                    Username = "user1",
+                    DisplayName = "کاربر تست اول",
+                    Email = "user1@company.com",
+                    Password = "user123",
+                    RoleId = 1, // User
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new User
+                {
+                    Id = 5,
+                    Username = "user2",
+                    DisplayName = "کاربر تست دوم",
+                    Email = "user2@company.com",
+                    Password = "user123",
+                    RoleId = 1, // User
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                }
+            );
 
-            // Ticket Configuration
-            modelBuilder.Entity<Ticket>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                entity.Property(e => e.Status)
-                    .HasConversion<int>();
-
-                entity.Property(e => e.Priority)
-                    .HasConversion<int>();
-
-                entity.Property(e => e.Category)
-                    .HasConversion<int>();
-
-                // Relations
-                entity.HasOne(e => e.CreatedByUser)
-                    .WithMany(u => u.CreatedTickets)
-                    .HasForeignKey(e => e.CreatedByUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(e => e.AssignedToUser)
-                    .WithMany(u => u.AssignedTickets)
-                    .HasForeignKey(e => e.AssignedToUserId)
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                entity.HasOne(e => e.ClosedByUser)
-                    .WithMany()
-                    .HasForeignKey(e => e.ClosedByUserId)
-                    .OnDelete(DeleteBehavior.SetNull);
-            });
-
-            // Message Configuration
-            modelBuilder.Entity<Message>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                entity.HasOne(e => e.Ticket)
-                    .WithMany(t => t.Messages)
-                    .HasForeignKey(e => e.TicketId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(e => e.User)
-                    .WithMany(u => u.Messages)
-                    .HasForeignKey(e => e.UserId)
-                    .OnDelete(DeleteBehavior.Restrict);
-            });
-
-            // Attachment Configuration
-            modelBuilder.Entity<Attachment>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                entity.HasOne(e => e.Ticket)
-                    .WithMany(t => t.Attachments)
-                    .HasForeignKey(e => e.TicketId)
-                    .OnDelete(DeleteBehavior.Cascade);
-                //Error
-               /* entity.HasOne(e => e.Message)
-                    .WithMany(m => m.Attachments)
-                    .HasForeignKey(e => e.MessageId)
-                    .OnDelete(DeleteBehavior.Cascade);*/
-
-                entity.HasOne(e => e.UploadedByUser)
-                    .WithMany()
-                    .HasForeignKey(e => e.UploadedByUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
-            });
-
-            // TicketStatistic Configuration
-            modelBuilder.Entity<TicketStatistic>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.HasIndex(e => e.UserId).IsUnique();
-
-                entity.HasOne(e => e.User)
-                    .WithMany()
-                    .HasForeignKey(e => e.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
+            // Seed Sample Tickets
+            modelBuilder.Entity<Ticket>().HasData(
+                new Ticket
+                {
+                    Id = 1,
+                    Subject = "مشکل نصب نرم‌افزار",
+                    Description = "<p>نمی‌توانم نرم‌افزار جدید را نصب کنم. لطفاً کمک کنید.</p>",
+                    Priority = TicketPriority.Normal,
+                    Category = TicketCategory.Software,
+                    Status = TicketStatus.Open,
+                    CreatedByUserId = 4, // user1
+                    CreatedAt = DateTime.UtcNow.AddDays(-2),
+                    LastActivityAt = DateTime.UtcNow.AddDays(-2)
+                },
+                new Ticket
+                {
+                    Id = 2,
+                    Subject = "خرابی پرینتر",
+                    Description = "<p>پرینتر طبقه سوم کار نمی‌کند.</p>",
+                    Priority = TicketPriority.High,
+                    Category = TicketCategory.Hardware,
+                    Status = TicketStatus.InProgress,
+                    CreatedByUserId = 5, // user2
+                    AssignedToUserId = 2, // support1
+                    CreatedAt = DateTime.UtcNow.AddDays(-1),
+                    AssignedAt = DateTime.UtcNow.AddHours(-2),
+                    LastActivityAt = DateTime.UtcNow.AddHours(-1)
+                }
+            );
         }
     }
 }
