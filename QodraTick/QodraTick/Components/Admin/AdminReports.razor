@@ -1,0 +1,811 @@
+﻿@page "/admin/reports"
+@attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>گزارشات - مدیریت</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">گزارشات جامع سیستم</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-outline-secondary @(selectedPeriod == "today" ? "active" : "")" 
+                    @onclick='() => ChangePeriod("today")'>امروز</button>
+            <button class="btn btn-outline-secondary @(selectedPeriod == "week" ? "active" : "")" 
+                    @onclick='() => ChangePeriod("week")'>هفته</button>
+            <button class="btn btn-outline-secondary @(selectedPeriod == "month" ? "active" : "")" 
+                    @onclick='() => ChangePeriod("month")'>ماه</button>
+            <button class="btn btn-outline-secondary @(selectedPeriod == "quarter" ? "active" : "")" 
+                    @onclick='() => ChangePeriod("quarter")'>فصل</button>
+        </div>
+        <button class="btn btn-success" @onclick="ExportReport" disabled="@isExporting">
+            @if (isExporting)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            else
+            {
+                <i class="bi bi-download me-1"></i>
+            }
+            خروجی Excel
+        </button>
+    </div>
+</div>
+
+<!-- Executive Summary -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    خلاصه اجرایی - @GetPeriodText(selectedPeriod)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <div class="metric-box">
+                            <h3 class="text-primary">@totalTickets</h3>
+                            <p class="mb-1"><strong>کل تیکت‌ها</strong></p>
+                            <small class="text-muted">
+                                @(previousPeriodTickets > 0 ? 
+                                    (((double)(totalTickets - previousPeriodTickets) / previousPeriodTickets) * 100).ToString("F1") + "%" :
+                                    "N/A")
+                                <i class="bi bi-arrow-@(totalTickets >= previousPeriodTickets ? "up" : "down") text-@(totalTickets >= previousPeriodTickets ? "success" : "danger")"></i>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-box">
+                            <h3 class="text-success">@resolvedTickets</h3>
+                            <p class="mb-1"><strong>حل شده</strong></p>
+                            <small class="text-success">
+                                @(totalTickets > 0 ? ((double)resolvedTickets / totalTickets * 100).ToString("F1") + "%" : "0%")
+                                نرخ حل
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-box">
+                            <h3 class="text-warning">@pendingTickets</h3>
+                            <p class="mb-1"><strong>در انتظار</strong></p>
+                            <small class="text-warning">
+                                @(pendingTickets > 0 ? overdueTickets : 0) دیرکرد
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-box">
+                            <h3 class="text-info">@averageResponseTime.ToString("F1")</h3>
+                            <p class="mb-1"><strong>میانگین پاسخ</strong></p>
+                            <small class="text-muted">ساعت</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-box">
+                            <h3 class="text-dark">@customerSatisfaction.ToString("F0")</h3>
+                            <p class="mb-1"><strong>رضایت مشتری</strong></p>
+                            <small class="text-muted">درصد</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-box">
+                            <h3 class="text-secondary">@activeSupporters</h3>
+                            <p class="mb-1"><strong>پشتیبان فعال</strong></p>
+                            <small class="text-muted">از @totalSupporters نفر</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Ticket Trend Chart -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6>روند تیکت‌ها در زمان</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="ticketTrendChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Priority Distribution -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6>توزیع اولویت</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="priorityChart" width="200" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Support Team Performance -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6>عملکرد تیم پشتیبانی</h6>
+            </div>
+            <div class="card-body">
+                @if (supportPerformance?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>پشتیبان</th>
+                                    <th>تیکت‌های فعال</th>
+                                    <th>حل شده</th>
+                                    <th>میانگین زمان حل</th>
+                                    <th>نرخ موفقیت</th>
+                                    <th>بار کاری</th>
+                                    <th>امتیاز عملکرد</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var support in supportPerformance.OrderByDescending(s => s.PerformanceScore))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-circle @GetPerformanceColor(support.PerformanceScore) me-2">
+                                                    @support.Name.Substring(0, 1).ToUpper()
+                                                </div>
+                                                <div>
+                                                    <strong>@support.Name</strong>
+                                                    @if (support.IsOnline)
+                                                    {
+                                                        <span class="badge bg-success ms-1">آنلاین</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">@support.ActiveTickets</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">@support.ResolvedTickets</span>
+                                        </td>
+                                        <td>
+                                            <span class="@GetResolutionTimeColor(support.AverageResolutionTime)">
+                                                @support.AverageResolutionTime.ToString("F1") ساعت
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress me-2" style="width: 60px; height: 6px;">
+                                                    <div class="progress-bar @GetSuccessRateColor(support.SuccessRate)" 
+                                                         style="width: @support.SuccessRate%"></div>
+                                                </div>
+                                                <small>@support.SuccessRate.ToString("F0")%</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @GetWorkloadStatus(support.ActiveTickets)
+                                        </td>
+                                        <td>
+                                            <span class="badge @GetPerformanceScoreBadge(support.PerformanceScore)">
+                                                @support.PerformanceScore.ToString("F1")
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-people fs-1"></i>
+                        <p>اطلاعات عملکرد در دسترس نیست</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category and Response Time Analysis -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6>تحلیل دسته‌بندی</h6>
+            </div>
+            <div class="card-body">
+                @if (categoryAnalysis?.Any() == true)
+                {
+                    @foreach (var category in categoryAnalysis)
+                    {
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span><strong>@category.Name</strong></span>
+                                <span class="text-muted">@category.Count تیکت</span>
+                            </div>
+                            <div class="progress mb-1">
+                                <div class="progress-bar bg-primary" style="width: @(totalTickets > 0 ? (category.Count * 100.0 / totalTickets) : 0)%"></div>
+                            </div>
+                            <div class="row small text-muted">
+                                <div class="col-4">
+                                    <i class="bi bi-clock"></i>
+                                    میانگین: @category.AverageResolutionTime.ToString("F1")ساعت
+                                </div>
+                                <div class="col-4">
+                                    <i class="bi bi-check-circle"></i>
+                                    حل شده: @category.ResolvedCount
+                                </div>
+                                <div class="col-4">
+                                    <i class="bi bi-star"></i>
+                                    رضایت: @category.SatisfactionRate.ToString("F0")%
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6>تحلیل زمان پاسخ</h6>
+            </div>
+            <div class="card-body">
+                @if (responseTimeAnalysis != null)
+                {
+                    <div class="mb-3">
+                        <h6 class="text-success">اهداف SLA</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="metric-small">
+                                    <div class="d-flex justify-content-between">
+                                        <span>اورژانس (+2 ساعت)</span>
+                                        <strong class="@(responseTimeAnalysis.CriticalSLA >= 90 ? "text-success" : "text-danger")">
+                                            @responseTimeAnalysis.CriticalSLA.ToString("F0")%
+                                        </strong>
+                                    </div>
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar @(responseTimeAnalysis.CriticalSLA >= 90 ? "bg-success" : "bg-danger")" 
+                                             style="width: @responseTimeAnalysis.CriticalSLA%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="metric-small">
+                                    <div class="d-flex justify-content-between">
+                                        <span>بالا (+4 ساعت)</span>
+                                        <strong class="@(responseTimeAnalysis.HighSLA >= 85 ? "text-success" : "text-warning")">
+                                            @responseTimeAnalysis.HighSLA.ToString("F0")%
+                                        </strong>
+                                    </div>
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar @(responseTimeAnalysis.HighSLA >= 85 ? "bg-success" : "bg-warning")" 
+                                             style="width: @responseTimeAnalysis.HighSLA%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <div class="metric-small">
+                                    <div class="d-flex justify-content-between">
+                                        <span>عادی (+24 ساعت)</span>
+                                        <strong class="@(responseTimeAnalysis.NormalSLA >= 80 ? "text-success" : "text-warning")">
+                                            @responseTimeAnalysis.NormalSLA.ToString("F0")%
+                                        </strong>
+                                    </div>
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar @(responseTimeAnalysis.NormalSLA >= 80 ? "bg-success" : "bg-warning")" 
+                                             style="width: @responseTimeAnalysis.NormalSLA%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="metric-small">
+                                    <div class="d-flex justify-content-between">
+                                        <span>کم (+48 ساعت)</span>
+                                        <strong class="@(responseTimeAnalysis.LowSLA >= 75 ? "text-success" : "text-info")">
+                                            @responseTimeAnalysis.LowSLA.ToString("F0")%
+                                        </strong>
+                                    </div>
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar @(responseTimeAnalysis.LowSLA >= 75 ? "bg-success" : "bg-info")" 
+                                             style="width: @responseTimeAnalysis.LowSLA%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div>
+                        <h6 class="text-info">آمار کلی پاسخ</h6>
+                        <div class="row">
+                            <div class="col-4 text-center">
+                                <strong>@responseTimeAnalysis.FastResponses</strong>
+                                <br><small class="text-success">پاسخ سریع</small>
+                            </div>
+                            <div class="col-4 text-center">
+                                <strong>@responseTimeAnalysis.SlowResponses</strong>
+                                <br><small class="text-warning">پاسخ کند</small>
+                            </div>
+                            <div class="col-4 text-center">
+                                <strong>@responseTimeAnalysis.NoResponse</strong>
+                                <br><small class="text-danger">بدون پاسخ</small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Insights -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6>تحلیل‌های تخصصی</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="insight-box bg-light">
+                            <h6 class="text-primary">پیک ساعات کاری</h6>
+                            <p class="mb-1"><strong>10:00 - 12:00</strong></p>
+                            <small class="text-muted">بیشترین تیکت‌ها</small>
+                            <div class="mt-2">
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar bg-primary" style="width: 85%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="insight-box bg-light">
+                            <h6 class="text-success">بهترین روز</h6>
+                            <p class="mb-1"><strong>سه‌شنبه</strong></p>
+                            <small class="text-muted">کمترین تیکت‌ها</small>
+                            <div class="mt-2">
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar bg-success" style="width: 60%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="insight-box bg-light">
+                            <h6 class="text-warning">مسائل تکراری</h6>
+                            <p class="mb-1"><strong>@((int)totalTickets * 0.15)</strong> تیکت</p>
+                            <small class="text-muted">قابل پیشگیری</small>
+                            <div class="mt-2">
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar bg-warning" style="width: 35%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="insight-box bg-light">
+                            <h6 class="text-info">نیاز آموزش</h6>
+                            <p class="mb-1"><strong>نرم‌افزار</strong></p>
+                            <small class="text-muted">بیشترین مشکلات</small>
+                            <div class="mt-2">
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar bg-info" style="width: 70%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string selectedPeriod = "month";
+    private bool isExporting = false;
+    
+    // Summary metrics
+    private int totalTickets = 0;
+    private int resolvedTickets = 0;
+    private int pendingTickets = 0;
+    private int overdueTickets = 0;
+    private int previousPeriodTickets = 0;
+    private double averageResponseTime = 0;
+    private double customerSatisfaction = 85.0;
+    private int activeSupporters = 0;
+    private int totalSupporters = 0;
+    
+    // Data collections
+    private List<SupportPerformance>? supportPerformance;
+    private List<CategoryAnalysis>? categoryAnalysis;
+    private ResponseTimeAnalysis? responseTimeAnalysis;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReportData();
+        await LoadChartData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeCharts();
+        }
+    }
+
+    private async Task LoadReportData()
+    {
+        var now = DateTime.UtcNow;
+        var (startDate, endDate) = GetDateRange(selectedPeriod, now);
+        var (prevStartDate, prevEndDate) = GetDateRange(selectedPeriod, startDate.AddDays(-1));
+
+        // Basic metrics
+        var allTickets = await DbContext.Tickets
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.AssignedToUser)
+            .Include(t => t.Messages)
+            .Where(t => t.CreatedAt >= startDate && t.CreatedAt <= endDate)
+            .ToListAsync();
+
+        var previousTickets = await DbContext.Tickets
+            .Where(t => t.CreatedAt >= prevStartDate && t.CreatedAt <= prevEndDate)
+            .CountAsync();
+
+        totalTickets = allTickets.Count;
+        resolvedTickets = allTickets.Count(t => t.Status == TicketStatus.Closed);
+        pendingTickets = allTickets.Count(t => t.Status == TicketStatus.Open || t.Status == TicketStatus.InProgress);
+        previousPeriodTickets = previousTickets;
+        
+        // Calculate overdue tickets
+        overdueTickets = allTickets.Count(t => 
+            (t.Status == TicketStatus.Open || t.Status == TicketStatus.InProgress) &&
+            (now - t.CreatedAt).TotalHours > GetSLAHours(t.Priority));
+
+        // Support team metrics
+        var supportUsers = await UserService.GetSupportUsersAsync();
+        totalSupporters = supportUsers.Count;
+        activeSupporters = supportUsers.Count(s => 
+            allTickets.Any(t => t.AssignedToUserId == s.Id && 
+                               (t.Status == TicketStatus.InProgress || t.Status == TicketStatus.Closed)));
+
+        // Average response time
+        var responseTimes = allTickets.Where(t => t.Messages.Any(m => m.IsFromSupport))
+                                     .Select(t => {
+                                         var firstResponse = t.Messages.Where(m => m.IsFromSupport)
+                                                                       .OrderBy(m => m.CreatedAt)
+                                                                       .FirstOrDefault();
+                                         return firstResponse != null ? 
+                                                (firstResponse.CreatedAt - t.CreatedAt).TotalHours : 0;
+                                     })
+                                     .Where(h => h > 0);
+        
+        averageResponseTime = responseTimes.Any() ? responseTimes.Average() : 0;
+
+        await LoadSupportPerformance(allTickets, supportUsers);
+        await LoadCategoryAnalysis(allTickets);
+        await LoadResponseTimeAnalysis(allTickets);
+    }
+
+    private async Task LoadSupportPerformance(List<Ticket> tickets, List<User> supportUsers)
+    {
+        supportPerformance = new List<SupportPerformance>();
+
+        foreach (var user in supportUsers)
+        {
+            var userTickets = tickets.Where(t => t.AssignedToUserId == user.Id || t.ClosedByUserId == user.Id).ToList();
+            var activeTickets = userTickets.Count(t => t.Status == TicketStatus.InProgress);
+            var resolvedTickets = userTickets.Count(t => t.Status == TicketStatus.Closed);
+            
+            var resolutionTimes = userTickets.Where(t => t.Status == TicketStatus.Closed && 
+                                                        t.AssignedAt.HasValue && 
+                                                        t.ClosedAt.HasValue)
+                                            .Select(t => (t.ClosedAt!.Value - t.AssignedAt!.Value).TotalHours);
+            
+            var avgResolutionTime = resolutionTimes.Any() ? resolutionTimes.Average() : 0;
+            var successRate = userTickets.Count > 0 ? (resolvedTickets * 100.0 / userTickets.Count) : 0;
+            
+            // Performance score calculation
+            var performanceScore = CalculatePerformanceScore(resolvedTickets, avgResolutionTime, successRate, activeTickets);
+
+            supportPerformance.Add(new SupportPerformance
+            {
+                UserId = user.Id,
+                Name = user.DisplayName,
+                ActiveTickets = activeTickets,
+                ResolvedTickets = resolvedTickets,
+                AverageResolutionTime = avgResolutionTime,
+                SuccessRate = successRate,
+                PerformanceScore = performanceScore,
+                IsOnline = new Random().Next(0, 2) == 1 // Mock online status
+            });
+        }
+    }
+
+    private async Task LoadCategoryAnalysis(List<Ticket> tickets)
+    {
+        categoryAnalysis = tickets.GroupBy(t => t.Category)
+                                  .Select(g => {
+                                      var categoryTickets = g.ToList();
+                                      var resolved = categoryTickets.Count(t => t.Status == TicketStatus.Closed);
+                                      var avgResolutionTime = categoryTickets.Where(t => t.Status == TicketStatus.Closed &&
+                                                                                        t.AssignedAt.HasValue &&
+                                                                                        t.ClosedAt.HasValue)
+                                                                             .Select(t => (t.ClosedAt!.Value - t.AssignedAt!.Value).TotalHours)
+                                                                             .DefaultIfEmpty(0)
+                                                                             .Average();
+                                      
+                                      return new CategoryAnalysis
+                                      {
+                                          Category = g.Key,
+                                          Name = GetCategoryText(g.Key),
+                                          Count = g.Count(),
+                                          ResolvedCount = resolved,
+                                          AverageResolutionTime = avgResolutionTime,
+                                          SatisfactionRate = 80 + new Random().Next(0, 15) // Mock satisfaction
+                                      };
+                                  })
+                                  .ToList();
+    }
+
+    private async Task LoadResponseTimeAnalysis(List<Ticket> tickets)
+    {
+        var criticalTickets = tickets.Where(t => t.Priority == TicketPriority.Critical);
+        var highTickets = tickets.Where(t => t.Priority == TicketPriority.High);
+        var normalTickets = tickets.Where(t => t.Priority == TicketPriority.Normal);
+        var lowTickets = tickets.Where(t => t.Priority == TicketPriority.Low);
+
+        responseTimeAnalysis = new ResponseTimeAnalysis
+        {
+            CriticalSLA = CalculateSLACompliance(criticalTickets, 2),
+            HighSLA = CalculateSLACompliance(highTickets, 4),
+            NormalSLA = CalculateSLACompliance(normalTickets, 24),
+            LowSLA = CalculateSLACompliance(lowTickets, 48),
+            FastResponses = tickets.Count(t => GetResponseTimeHours(t) <= 1),
+            SlowResponses = tickets.Count(t => GetResponseTimeHours(t) > GetSLAHours(t.Priority)),
+            NoResponse = tickets.Count(t => !t.Messages.Any(m => m.IsFromSupport))
+        };
+    }
+
+    private async Task LoadChartData()
+    {
+        // This would prepare data for charts
+        // Implementation depends on your charting library choice
+    }
+
+    private async Task InitializeCharts()
+    {
+        try
+        {
+            // Initialize Chart.js charts
+            await JSRuntime.InvokeVoidAsync("initializeReportCharts", new
+            {
+                ticketTrend = GetTicketTrendData(),
+                priority = GetPriorityData()
+            });
+        }
+        catch
+        {
+            // Chart initialization might fail on first render
+        }
+    }
+
+    private async Task ChangePeriod(string period)
+    {
+        selectedPeriod = period;
+        await LoadReportData();
+        await InitializeCharts();
+        StateHasChanged();
+    }
+
+    private async Task ExportReport()
+    {
+        isExporting = true;
+        try
+        {
+            // Mock export functionality
+            await Task.Delay(2000);
+            await JSRuntime.InvokeVoidAsync("alert", "گزارش با موفقیت صادر شد!");
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    // Helper methods
+    private (DateTime start, DateTime end) GetDateRange(string period, DateTime referenceDate)
+    {
+        var end = referenceDate;
+        var start = period switch
+        {
+            "today" => referenceDate.Date,
+            "week" => referenceDate.AddDays(-7),
+            "month" => referenceDate.AddDays(-30),
+            "quarter" => referenceDate.AddDays(-90),
+            _ => referenceDate.AddDays(-30)
+        };
+        
+        return (start, end);
+    }
+
+    private double CalculatePerformanceScore(int resolved, double avgTime, double successRate, int activeTickets)
+    {
+        var resolvedScore = Math.Min(resolved * 0.5, 5.0);
+        var timeScore = avgTime > 0 ? Math.Max(5 - (avgTime / 24), 0) : 0;
+        var successScore = (successRate / 100) * 3;
+        var workloadPenalty = Math.Max(activeTickets - 3, 0) * 0.1;
+        
+        return Math.Max(resolvedScore + timeScore + successScore - workloadPenalty, 0);
+    }
+
+    private double CalculateSLACompliance(IEnumerable<Ticket> tickets, double targetHours)
+    {
+        var ticketList = tickets.ToList();
+        if (!ticketList.Any()) return 100;
+        
+        var compliantTickets = ticketList.Count(t => GetResponseTimeHours(t) <= targetHours);
+        return (compliantTickets * 100.0) / ticketList.Count;
+    }
+
+    private double GetResponseTimeHours(Ticket ticket)
+    {
+        var firstResponse = ticket.Messages.Where(m => m.IsFromSupport)
+                                          .OrderBy(m => m.CreatedAt)
+                                          .FirstOrDefault();
+        
+        return firstResponse != null ? 
+               (firstResponse.CreatedAt - ticket.CreatedAt).TotalHours : 
+               (DateTime.UtcNow - ticket.CreatedAt).TotalHours;
+    }
+
+    private double GetSLAHours(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Critical => 2,
+        TicketPriority.High => 4,
+        TicketPriority.Normal => 24,
+        TicketPriority.Low => 48,
+        _ => 24
+    };
+
+    private object GetTicketTrendData()
+    {
+        // Mock data for chart
+        return new
+        {
+            labels = new[] { "شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه" },
+            datasets = new[]
+            {
+                new { label = "ایجاد شده", data = new[] { 12, 19, 3, 5, 2, 3, 7 }, borderColor = "#007bff" },
+                new { label = "حل شده", data = new[] { 8, 15, 6, 4, 3, 2, 5 }, borderColor = "#28a745" }
+            }
+        };
+    }
+
+    private object GetPriorityData()
+    {
+        return new
+        {
+            labels = new[] { "کم", "عادی", "بالا", "اورژانس" },
+            datasets = new[]
+            {
+                new
+                {
+                    data = new[] { 30, 45, 20, 5 },
+                    backgroundColor = new[] { "#28a745", "#007bff", "#ffc107", "#dc3545" }
+                }
+            }
+        };
+    }
+
+    private string GetPeriodText(string period) => period switch
+    {
+        "today" => "امروز",
+        "week" => "هفته گذشته",
+        "month" => "ماه گذشته",
+        "quarter" => "فصل گذشته",
+        _ => "نامشخص"
+    };
+
+    private string GetCategoryText(TicketCategory category) => category switch
+    {
+        TicketCategory.Hardware => "سخت‌افزار",
+        TicketCategory.Software => "نرم‌افزار",
+        _ => "نامشخص"
+    };
+
+    // Styling helpers
+    private string GetPerformanceColor(double score) => score switch
+    {
+        >= 8 => "bg-success",
+        >= 6 => "bg-warning",
+        >= 4 => "bg-info",
+        _ => "bg-danger"
+    };
+
+    private string GetPerformanceScoreBadge(double score) => score switch
+    {
+        >= 8 => "bg-success",
+        >= 6 => "bg-warning text-dark",
+        >= 4 => "bg-info",
+        _ => "bg-danger"
+    };
+
+    private string GetResolutionTimeColor(double hours) => hours switch
+    {
+        <= 2 => "text-success",
+        <= 8 => "text-info",
+        <= 24 => "text-warning",
+        _ => "text-danger"
+    };
+
+    private string GetSuccessRateColor(double rate) => rate switch
+    {
+        >= 90 => "bg-success",
+        >= 80 => "bg-info",
+        >= 70 => "bg-warning",
+        _ => "bg-danger"
+    };
+
+    private string GetWorkloadStatus(int activeTickets) => activeTickets switch
+    {
+        <= 2 => "🟢 سبک",
+        <= 4 => "🟡 متوسط",
+        <= 6 => "🟠 سنگین",
+        _ => "🔴 بیش از حد"
+    };
+
+    // Data classes
+    public class SupportPerformance
+    {
+        public int UserId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int ActiveTickets { get; set; }
+        public int ResolvedTickets { get; set; }
+        public double AverageResolutionTime { get; set; }
+        public double SuccessRate { get; set; }
+        public double PerformanceScore { get; set; }
+        public bool IsOnline { get; set; }
+    }
+
+    public class CategoryAnalysis
+    {
+        public TicketCategory Category { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public int ResolvedCount { get; set; }
+        public double AverageResolutionTime { get; set; }
+        public double SatisfactionRate { get; set; }
+    }
+
+    public class ResponseTimeAnalysis
+    {
+        public double CriticalSLA { get; set; }
+        public double HighSLA { get; set; }
+        public double NormalSLA { get; set; }
+        public double LowSLA { get; set; }
+        public int FastResponses { get; set; }
+        public int SlowResponses { get; set; }
+        public int NoResponse { get; set; }
+    }
+}

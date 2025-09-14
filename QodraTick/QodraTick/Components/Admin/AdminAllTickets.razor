@@ -1,0 +1,859 @@
+﻿@page "/admin/tickets"
+@attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>مدیریت تمام تیکت‌ها</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">مدیریت تمام تیکت‌ها</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-outline-secondary @(selectedStatus == "all" ? "active" : "")"
+                    @onclick='() => FilterByStatus("all")'>
+                همه (@totalTickets)
+            </button>
+            <button class="btn btn-outline-warning @(selectedStatus == "open" ? "active" : "")"
+                    @onclick='() => FilterByStatus("open")'>
+                باز (@openCount)
+            </button>
+            <button class="btn btn-outline-info @(selectedStatus == "progress" ? "active" : "")"
+                    @onclick='() => FilterByStatus("progress")'>
+                در حال کار (@progressCount)
+            </button>
+            <button class="btn btn-outline-success @(selectedStatus == "closed" ? "active" : "")"
+                    @onclick='() => FilterByStatus("closed")'>
+                بسته (@closedCount)
+            </button>
+        </div>
+
+        <div class="btn-group me-2">
+            <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-funnel me-1"></i>
+                فیلترها
+            </button>
+            <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">اولویت</h6></li>
+                <li>
+                    <a class="dropdown-item" href="#" @onclick='() => FilterByPriority("all")'>
+                        @if (selectedPriority == "all")
+                        {
+                            <i class="bi bi-check me-2"></i>
+                        }
+ همه اولویت‌ها
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item text-danger" href="#" @onclick='() => FilterByPriority("Critical")'>
+                        @if (selectedPriority == "Critical")
+                        {
+                            <i class="bi bi-check me-2"></i>
+                        }
+ اورژانس
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item text-warning" href="#" @onclick='() => FilterByPriority("High")'>
+                        @if (selectedPriority == "High")
+                        {
+                            <i class="bi bi-check me-2"></i>
+                        }
+ بالا
+                    </a>
+                </li>
+
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">دسته‌بندی</h6></li>
+                <li>
+                    <a class="dropdown-item" href="#" @onclick='() => FilterByCategory("all")'>
+                        @if (selectedCategory == "all")
+                        {
+                            <i class="bi bi-check me-2"></i>
+                        }
+ همه دسته‌ها
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#" @onclick='() => FilterByCategory("Hardware")'>
+                        @if (selectedCategory == "Hardware")
+                        {
+                            <i class="bi bi-check me-2"></i>
+                        }
+ سخت‌افزار
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#" @onclick='() => FilterByCategory("Software")'>
+                        @if (selectedCategory == "Software")
+                        {
+                            <i class="bi bi-check me-2"></i>
+                        }
+ نرم‌افزار
+                    </a>
+                </li>
+
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="#" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle me-2"></i> پاک کردن فیلترها
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="input-group" style="width: 250px;">
+            <input type="text" class="form-control" placeholder="جستجو در تیکت‌ها..."
+                   @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchChanged">
+            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <div class="row text-center">
+                <div class="col-md-2">
+                    <strong>@filteredTickets?.Count</strong>
+                    <br><small>نمایش داده شده</small>
+                </div>
+                <div class="col-md-2">
+                    <strong>@overdueTicketsCount</strong>
+                    <br><small class="text-danger">دیرکرد</small>
+                </div>
+                <div class="col-md-2">
+                    <strong>@unassignedTicketsCount</strong>
+                    <br><small class="text-warning">بدون پشتیبان</small>
+                </div>
+                <div class="col-md-2">
+                    <strong>@averageResponseTime.ToString("F1")</strong>
+                    <br><small>میانگین پاسخ (ساعت)</small>
+                </div>
+                <div class="col-md-2">
+                    <strong>@criticalTicketsCount</strong>
+                    <br><small class="text-danger">اورژانس</small>
+                </div>
+                <div class="col-md-2">
+                    <strong>@totalTickets > 0 ? ((double)closedCount / totalTickets * 100).ToString("F1") + "%" : "0%"</strong>
+                    <br><small>نرخ حل</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (filteredTickets == null)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">در حال بارگذاری...</span>
+        </div>
+    </div>
+}
+else if (!filteredTickets.Any())
+{
+    <div class="alert alert-info text-center">
+        <h4>تیکتی یافت نشد</h4>
+        <p>
+            @if (!string.IsNullOrEmpty(searchTerm))
+            {
+                <span>نتیجه‌ای برای جستجوی «@searchTerm» یافت نشد.</span>
+            }
+            else
+            {
+                <span>تیکتی با فیلترهای انتخابی موجود نیست.</span>
+            }
+        </p>
+        @if (!string.IsNullOrEmpty(searchTerm) || selectedStatus != "all" || selectedPriority != "all" || selectedCategory != "all")
+        {
+            <button class="btn btn-outline-secondary" @onclick="ClearAllFilters">پاک کردن همه فیلترها</button>
+        }
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 80px;">شماره</th>
+                    <th>موضوع و کاربر</th>
+                    <th style="width: 100px;">وضعیت</th>
+                    <th style="width: 100px;">اولویت</th>
+                    <th style="width: 120px;">پشتیبان</th>
+                    <th style="width: 120px;">آخرین فعالیت</th>
+                    <th style="width: 80px;">SLA</th>
+                    <th style="width: 120px;">عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ticket in filteredTickets)
+                {
+                    <tr class="@GetTicketRowClass(ticket)" data-ticket-id="@ticket.Id">
+                        <td>
+                            <strong>#@ticket.Id</strong>
+                            @if (IsOverdue(ticket))
+                            {
+                                <br>
+                    
+                                <span class="badge bg-danger">دیرکرد</span>
+                            }
+                            @if (HasUnreadMessages(ticket))
+                            {
+                                <br>
+                    
+                                <span class="badge bg-info">جدید</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="@GetPriorityIndicatorClass(ticket.Priority)" style="width: 4px; height: 60px; position: absolute; left: 0;"></div>
+                            <div style="margin-right: 8px;">
+                                <strong>@ticket.Subject</strong>
+                                <br>
+                                <small class="text-muted">
+                                    @((MarkupString)TruncateHtml(ticket.Description, 60))
+                                </small>
+                                <br>
+                                <div class="d-flex align-items-center mt-1">
+                                    <div class="avatar-circle bg-secondary me-2" style="width: 20px; height: 20px; font-size: 10px;">
+                                        @ticket.CreatedByUser.DisplayName.Substring(0, 1).ToUpper()
+                                    </div>
+                                    <small><strong>@ticket.CreatedByUser.DisplayName</strong></small>
+                                    <span class="badge bg-light text-dark ms-2">@GetCategoryText(ticket.Category)</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge @GetStatusBadgeClass(ticket.Status)">
+                                @GetStatusText(ticket.Status)
+                            </span>
+                            @if (ticket.Status == TicketStatus.InProgress && ticket.Messages.Any())
+                            {
+                                <br>
+                    
+                                <small class="text-muted">@ticket.Messages.Count پیام</small>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @GetPriorityBadgeClass(ticket.Priority)">
+                                @GetPriorityText(ticket.Priority)
+                            </span>
+                            <br>
+                            <small class="text-muted">@ticket.CreatedAt.ToString("MM/dd")</small>
+                        </td>
+                        <td>
+                            @if (ticket.AssignedToUser != null)
+                            {
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle bg-info me-2" style="width: 25px; height: 25px; font-size: 11px;">
+                                        @ticket.AssignedToUser.DisplayName.Substring(0, 1).ToUpper()
+                                    </div>
+                                    <div>
+                                        <small><strong>@ticket.AssignedToUser.DisplayName</strong></small>
+                                        @if (ticket.AssignedAt.HasValue)
+                                        {
+                                            <br>
+                            
+                                            <small class="text-muted">@GetRelativeTime(ticket.AssignedAt.Value)</small>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-warning">
+                                    <i class="bi bi-person-x"></i>
+                                    بدون پشتیبان
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            <small>@ticket.LastActivityAt.ToString("MM/dd HH:mm")</small>
+                            <br>
+                            <small class="text-muted">@GetRelativeTime(ticket.LastActivityAt)</small>
+                        </td>
+                        <td>
+                            @{
+                                var slaStatus = GetSLAStatus(ticket);
+                            }
+                            <div class="sla-indicator">
+                                <div class="progress mb-1" style="height: 4px;">
+                                    <div class="progress-bar @slaStatus.ColorClass" style="width: @slaStatus.Percentage%"></div>
+                                </div>
+                                <small class="@slaStatus.TextClass">@slaStatus.Text</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/tickets/@ticket.Id" class="btn btn-outline-primary" title="مشاهده">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+
+                                @if (ticket.Status == TicketStatus.Open)
+                                {
+                                    <div class="btn-group">
+                                        <button class="btn btn-outline-success dropdown-toggle"
+                                                data-bs-toggle="dropdown" title="اختصاص">
+                                            <i class="bi bi-person-plus"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            @foreach (var support in supportUsers)
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item" href="#"
+                                                       @onclick="() => AssignTicket(ticket.Id, support.Id)"
+                                                       @onclick:preventDefault="true">
+                                                        <i class="bi bi-person me-2"></i>
+                                                        @support.DisplayName
+                                                        <small class="text-muted ms-1">(@GetSupportWorkload(support.Id))</small>
+                                                    </a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                                else if (ticket.Status == TicketStatus.InProgress)
+                                {
+                                    <button class="btn btn-outline-warning"
+                                            @onclick="() => ReassignTicket(ticket)"
+                                            title="انتقال">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </button>
+
+                                    <button class="btn btn-outline-success"
+                                            @onclick="() => ForceCloseTicket(ticket)"
+                                            title="بستن اجباری">
+                                        <i class="bi bi-check-square"></i>
+                                    </button>
+                                }
+
+                                @if (ticket.Priority != TicketPriority.Critical)
+                                {
+                                    <button class="btn btn-outline-danger"
+                                            @onclick="() => EscalateTicket(ticket)"
+                                            title="افزایش اولویت">
+                                        <i class="bi bi-arrow-up"></i>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1)
+    {
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                نمایش @((currentPage - 1) * pageSize + 1) تا @(Math.Min(currentPage * pageSize, totalRecords)) از @totalRecords تیکت
+            </div>
+            <nav aria-label="صفحه‌بندی">
+                <ul class="pagination">
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(1)">اول</button>
+                    </li>
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">قبلی</button>
+                    </li>
+
+                    @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+                    {
+                        <li class="page-item @(currentPage == i ? "active" : "")">
+                            <button class="page-link" @onclick="() => ChangePage(i)">@i</button>
+                        </li>
+                    }
+
+                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">بعدی</button>
+                    </li>
+                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(totalPages)">آخر</button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+}
+
+<!-- Bulk Actions (when tickets are selected) -->
+@if (selectedTicketIds.Any())
+{
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
+        <div class="card shadow">
+            <div class="card-body">
+                <h6>@selectedTicketIds.Count تیکت انتخاب شده</h6>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-success" @onclick="BulkAssign">
+                        <i class="bi bi-person-plus me-1"></i>
+                        اختصاص گروهی
+                    </button>
+                    <button class="btn btn-sm btn-warning" @onclick="BulkEscalate">
+                        <i class="bi bi-arrow-up me-1"></i>
+                        افزایش اولویت
+                    </button>
+                    <button class="btn btn-sm btn-secondary" @onclick="ClearSelection">
+                        <i class="bi bi-x me-1"></i>
+                        لغو انتخاب
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Ticket>? allTickets;
+    private List<Ticket>? filteredTickets;
+    private List<User> supportUsers = new();
+    private HashSet<int> selectedTicketIds = new();
+
+    // Filter states
+    private string selectedStatus = "all";
+    private string selectedPriority = "all";
+    private string selectedCategory = "all";
+    private string searchTerm = string.Empty;
+    private bool isProcessing = false;
+
+    // Statistics
+    private int totalTickets = 0;
+    private int openCount = 0;
+    private int progressCount = 0;
+    private int closedCount = 0;
+    private int overdueTicketsCount = 0;
+    private int unassignedTicketsCount = 0;
+    private int criticalTicketsCount = 0;
+    private double averageResponseTime = 0;
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 20;
+    private int totalPages = 1;
+    private int totalRecords = 0;
+
+    private System.Threading.Timer? searchTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSupportUsers();
+        await LoadAllTickets();
+    }
+
+    private async Task LoadSupportUsers()
+    {
+        supportUsers = await UserService.GetSupportUsersAsync();
+    }
+
+    private async Task LoadAllTickets()
+    {
+        allTickets = await DbContext.Tickets
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.AssignedToUser)
+            .Include(t => t.Messages.OrderBy(m => m.CreatedAt))
+                .ThenInclude(m => m.User)
+            .OrderByDescending(t => t.Priority)
+            .ThenByDescending(t => t.LastActivityAt)
+            .ToListAsync();
+
+        CalculateStatistics();
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        if (allTickets == null) return;
+
+        totalTickets = allTickets.Count;
+        openCount = allTickets.Count(t => t.Status == TicketStatus.Open);
+        progressCount = allTickets.Count(t => t.Status == TicketStatus.InProgress);
+        closedCount = allTickets.Count(t => t.Status == TicketStatus.Closed);
+
+        overdueTicketsCount = allTickets.Count(t => IsOverdue(t));
+        unassignedTicketsCount = allTickets.Count(t => t.AssignedToUserId == null && t.Status != TicketStatus.Closed);
+        criticalTicketsCount = allTickets.Count(t => t.Priority == TicketPriority.Critical && t.Status != TicketStatus.Closed);
+
+        // Calculate average response time
+        var responseTimes = allTickets.Where(t => t.Messages.Any(m => m.IsFromSupport))
+                                     .Select(t =>
+                                     {
+                                         var firstResponse = t.Messages.Where(m => m.IsFromSupport)
+                                                                       .OrderBy(m => m.CreatedAt)
+                                                                       .FirstOrDefault();
+                                         return firstResponse != null ?
+                                                (firstResponse.CreatedAt - t.CreatedAt).TotalHours : 0;
+                                     })
+                                     .Where(h => h > 0);
+
+        averageResponseTime = responseTimes.Any() ? responseTimes.Average() : 0;
+    }
+
+    private void ApplyFilters()
+    {
+        if (allTickets == null) return;
+
+        var query = allTickets.AsEnumerable();
+
+        // Status filter
+        if (selectedStatus != "all")
+        {
+            var status = Enum.Parse<TicketStatus>(selectedStatus switch
+            {
+                "open" => "Open",
+                "progress" => "InProgress",
+                "closed" => "Closed",
+                _ => "Open"
+            });
+            query = query.Where(t => t.Status == status);
+        }
+
+        // Priority filter
+        if (selectedPriority != "all")
+        {
+            var priority = Enum.Parse<TicketPriority>(selectedPriority);
+            query = query.Where(t => t.Priority == priority);
+        }
+
+        // Category filter
+        if (selectedCategory != "all")
+        {
+            var category = Enum.Parse<TicketCategory>(selectedCategory);
+            query = query.Where(t => t.Category == category);
+        }
+
+        // Search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(t =>
+                t.Subject.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.CreatedByUser.DisplayName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.Id.ToString().Contains(searchTerm) ||
+                (t.AssignedToUser?.DisplayName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        totalRecords = query.Count();
+        totalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
+
+        filteredTickets = query
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
+    // Filter methods
+    private async Task FilterByStatus(string status)
+    {
+        selectedStatus = status;
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task FilterByPriority(string priority)
+    {
+        selectedPriority = priority;
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task FilterByCategory(string category)
+    {
+        selectedCategory = category;
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        selectedPriority = "all";
+        selectedCategory = "all";
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ClearAllFilters()
+    {
+        selectedStatus = "all";
+        selectedPriority = "all";
+        selectedCategory = "all";
+        searchTerm = string.Empty;
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task OnSearchChanged()
+    {
+        searchTimer?.Dispose();
+        searchTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(() =>
+            {
+                currentPage = 1;
+                ApplyFilters();
+                StateHasChanged();
+            });
+        }, null, 500, System.Threading.Timeout.Infinite);
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    // Ticket operations
+    private async Task AssignTicket(int ticketId, int supportUserId)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("signalR.acceptTicket", ticketId);
+            await Task.Delay(500); // Give SignalR time to update
+            await LoadAllTickets();
+            await JSRuntime.InvokeVoidAsync("showToast", "تیکت با موفقیت اختصاص یافت", "success");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"خطا در اختصاص تیکت: {ex.Message}", "error");
+        }
+    }
+
+    private async Task ReassignTicket(Ticket ticket)
+    {
+        // Implementation for reassigning ticket
+        await JSRuntime.InvokeVoidAsync("alert", $"انتقال تیکت #{ticket.Id} - این قابلیت در حال توسعه است");
+    }
+
+    private async Task ForceCloseTicket(Ticket ticket)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"آیا از بستن اجباری تیکت #{ticket.Id} اطمینان دارید؟"))
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("signalR.closeTicket", ticket.Id);
+                await LoadAllTickets();
+                await JSRuntime.InvokeVoidAsync("showToast", "تیکت بسته شد", "success");
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", $"خطا: {ex.Message}", "error");
+            }
+        }
+    }
+
+    private async Task EscalateTicket(Ticket ticket)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"آیا از افزایش اولویت تیکت #{ticket.Id} اطمینان دارید؟"))
+        {
+            try
+            {
+                var dbTicket = await DbContext.Tickets.FindAsync(ticket.Id);
+                if (dbTicket != null && dbTicket.Priority < TicketPriority.Critical)
+                {
+                    dbTicket.Priority = (TicketPriority)((int)dbTicket.Priority + 1);
+                    dbTicket.LastActivityAt = DateTime.UtcNow;
+                    await DbContext.SaveChangesAsync();
+
+                    await LoadAllTickets();
+                    await JSRuntime.InvokeVoidAsync("showToast", "اولویت تیکت افزایش یافت", "success");
+                }
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", $"خطا: {ex.Message}", "error");
+            }
+        }
+    }
+
+    // Bulk operations
+    private async Task BulkAssign()
+    {
+        await JSRuntime.InvokeVoidAsync("alert", "اختصاص گروهی - در حال توسعه");
+        ClearSelection();
+    }
+
+    private async Task BulkEscalate()
+    {
+        await JSRuntime.InvokeVoidAsync("alert", "افزایش اولویت گروهی - در حال توسعه");
+        ClearSelection();
+    }
+
+    private void ClearSelection()
+    {
+        selectedTicketIds.Clear();
+        StateHasChanged();
+    }
+
+    // Helper methods
+    private bool IsOverdue(Ticket ticket)
+    {
+        if (ticket.Status == TicketStatus.Closed) return false;
+
+        var hoursSinceCreated = (DateTime.UtcNow - ticket.CreatedAt).TotalHours;
+        return ticket.Priority switch
+        {
+            TicketPriority.Critical => hoursSinceCreated > 2,
+            TicketPriority.High => hoursSinceCreated > 4,
+            TicketPriority.Normal => hoursSinceCreated > 24,
+            TicketPriority.Low => hoursSinceCreated > 48,
+            _ => false
+        };
+    }
+
+    private bool HasUnreadMessages(Ticket ticket)
+    {
+        if (ticket.Messages?.Any() != true) return false;
+
+        var lastMessage = ticket.Messages.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
+        return lastMessage != null &&
+               !lastMessage.IsFromSupport &&
+               (DateTime.UtcNow - lastMessage.CreatedAt).TotalHours < 2;
+    }
+
+    private string GetSupportWorkload(int supportId)
+    {
+        var activeCount = allTickets?.Count(t => t.AssignedToUserId == supportId &&
+                                                t.Status == TicketStatus.InProgress) ?? 0;
+        return activeCount switch
+        {
+            0 => "آزاد",
+            <= 2 => "سبک",
+            <= 4 => "متوسط",
+            _ => "پرکار"
+        };
+    }
+
+    private (string ColorClass, string TextClass, int Percentage, string Text) GetSLAStatus(Ticket ticket)
+    {
+        var hoursSinceCreated = (DateTime.UtcNow - ticket.CreatedAt).TotalHours;
+        var slaLimit = ticket.Priority switch
+        {
+            TicketPriority.Critical => 2,
+            TicketPriority.High => 4,
+            TicketPriority.Normal => 24,
+            TicketPriority.Low => 48,
+            _ => 24
+        };
+
+        var percentage = Math.Min((int)(hoursSinceCreated / slaLimit * 100), 100);
+
+        return percentage switch
+        {
+            <= 50 => ("bg-success", "text-success", percentage, "خوب"),
+            <= 80 => ("bg-warning", "text-warning", percentage, "هشدار"),
+            _ => ("bg-danger", "text-danger", percentage, "دیرکرد")
+        };
+    }
+
+    private string GetRelativeTime(DateTime dateTime)
+    {
+        var diff = DateTime.UtcNow - dateTime;
+
+        if (diff.TotalMinutes < 1) return "همین الان";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} دقیقه پیش";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} ساعت پیش";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} روز پیش";
+        return dateTime.ToString("yyyy/MM/dd");
+    }
+
+    private string TruncateHtml(string html, int maxLength)
+    {
+        if (string.IsNullOrEmpty(html)) return "";
+
+        var plainText = System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", "");
+        return plainText.Length <= maxLength ? plainText : plainText.Substring(0, maxLength) + "...";
+    }
+
+    // Styling helpers
+    private string GetTicketRowClass(Ticket ticket)
+    {
+        var classes = new List<string> { "position-relative" };
+
+        if (ticket.Priority == TicketPriority.Critical)
+            classes.Add("border-danger border-start border-3");
+        else if (IsOverdue(ticket))
+            classes.Add("border-warning border-start border-2");
+
+        if (HasUnreadMessages(ticket))
+            classes.Add("fw-bold");
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetPriorityIndicatorClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "bg-success",
+        TicketPriority.Normal => "bg-primary",
+        TicketPriority.High => "bg-warning",
+        TicketPriority.Critical => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetStatusBadgeClass(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "bg-warning text-dark",
+        TicketStatus.InProgress => "bg-info",
+        TicketStatus.Closed => "bg-success",
+        TicketStatus.Rejected => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetStatusText(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "باز",
+        TicketStatus.InProgress => "در حال کار",
+        TicketStatus.Closed => "بسته",
+        TicketStatus.Rejected => "رد شده",
+        _ => "نامشخص"
+    };
+
+    private string GetPriorityBadgeClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "bg-success",
+        TicketPriority.Normal => "bg-primary",
+        TicketPriority.High => "bg-warning text-dark",
+        TicketPriority.Critical => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetPriorityText(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "کم",
+        TicketPriority.Normal => "عادی",
+        TicketPriority.High => "بالا",
+        TicketPriority.Critical => "اورژانس",
+        _ => "نامشخص"
+    };
+
+    private string GetCategoryText(TicketCategory category) => category switch
+    {
+        TicketCategory.Hardware => "سخت‌افزار",
+        TicketCategory.Software => "نرم‌افزار",
+        _ => "نامشخص"
+    };
+
+    public void Dispose()
+    {
+        searchTimer?.Dispose();
+    }
+}

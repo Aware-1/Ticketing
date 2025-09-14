@@ -4,6 +4,8 @@
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router> *@
+@using Microsoft.AspNetCore.Components.Authorization
+
 <CascadingAuthenticationState>
     <Router AppAssembly="typeof(Program).Assembly">
         <Found Context="routeData">
@@ -13,7 +15,7 @@
                         <div class="alert alert-warning text-center">
                             <h3>دسترسی محدود</h3>
                             <p>برای استفاده از این بخش باید وارد شوید.</p>
-                            <p>لطفاً از اعتبارسنجی Active Directory استفاده کنید.</p>
+                            <a href="/login" class="btn btn-primary">ورود به سیستم</a>
                         </div>
                     </div>
                 </NotAuthorized>

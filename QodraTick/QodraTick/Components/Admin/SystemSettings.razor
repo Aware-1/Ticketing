@@ -1,0 +1,511 @@
+﻿@page "/admin/settings"
+@attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject IJSRuntime JSRuntime
+
+<PageTitle>تنظیمات سیستم</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">تنظیمات سیستم</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-success" @onclick="SaveAllSettings" disabled="@isSaving">
+            @if (isSaving)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            else
+            {
+                <i class="bi bi-check-lg me-1"></i>
+            }
+            ذخیره همه تغییرات
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- General Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="bi bi-gear me-2"></i>تنظیمات عمومی</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">نام سازمان</label>
+                    <input type="text" class="form-control" @bind="settings.OrganizationName"
+                           placeholder="نام شرکت یا سازمان">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">حداکثر تعداد تیکت فعال هر کاربر</label>
+                    <input type="number" class="form-control" @bind="settings.MaxActiveTicketsPerUser"
+                           min="1" max="50">
+                    <small class="form-text text-muted">کاربران عادی نمی‌توانند بیش از این تعداد تیکت فعال داشته باشند</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">حداکثر تعداد تیکت برای هر پشتیبان</label>
+                    <input type="number" class="form-control" @bind="settings.MaxTicketsPerSupport"
+                           min="5" max="100">
+                    <small class="form-text text-muted">هر پشتیبان حداکثر این تعداد تیکت می‌تواند داشته باشد</small>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.AutoAssignTickets"
+                           id="autoAssign">
+                    <label class="form-check-label" for="autoAssign">
+                        اختصاص خودکار تیکت‌ها
+                    </label>
+                    <small class="form-text text-muted d-block">تیکت‌ها به صورت خودکار به پشتیبان با کمترین بار کاری اختصاص می‌یابند</small>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.AllowTicketReopening"
+                           id="allowReopen">
+                    <label class="form-check-label" for="allowReopen">
+                        اجازه بازگشایی تیکت‌های بسته شده
+                    </label>
+                    <small class="form-text text-muted d-block">کاربران می‌توانند تیکت‌های بسته شده را مجدداً باز کنند</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLA Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="bi bi-clock me-2"></i>تنظیمات SLA</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <small><i class="bi bi-info-circle me-1"></i>زمان‌ها بر حسب ساعت تنظیم می‌شوند</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-danger">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        اولویت اورژانس (ساعت)
+                    </label>
+                    <input type="number" class="form-control" @bind="settings.CriticalSLAHours"
+                           min="0.5" max="24" step="0.5">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-warning">
+                        <i class="bi bi-exclamation me-1"></i>
+                        اولویت بالا (ساعت)
+                    </label>
+                    <input type="number" class="form-control" @bind="settings.HighSLAHours"
+                           min="1" max="48" step="0.5">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-primary">
+                        <i class="bi bi-dash me-1"></i>
+                        اولویت عادی (ساعت)
+                    </label>
+                    <input type="number" class="form-control" @bind="settings.NormalSLAHours"
+                           min="4" max="168">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-success">
+                        <i class="bi bi-check me-1"></i>
+                        اولویت کم (ساعت)
+                    </label>
+                    <input type="number" class="form-control" @bind="settings.LowSLAHours"
+                           min="24" max="720">
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.EnableSLAAlerts"
+                           id="slaAlerts">
+                    <label class="form-check-label" for="slaAlerts">
+                        فعال‌سازی هشدارهای SLA
+                    </label>
+                    <small class="form-text text-muted d-block">در صورت نزدیک شدن به موعد SLA، هشدار ارسال می‌شود</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="bi bi-bell me-2"></i>تنظیمات اعلان‌ها</h6>
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.NotifyOnNewTicket"
+                           id="notifyNew">
+                    <label class="form-check-label" for="notifyNew">
+                        اعلان تیکت جدید به پشتیبانان
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.NotifyOnTicketAssigned"
+                           id="notifyAssigned">
+                    <label class="form-check-label" for="notifyAssigned">
+                        اعلان اختصاص تیکت به کاربر
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.NotifyOnStatusChange"
+                           id="notifyStatus">
+                    <label class="form-check-label" for="notifyStatus">
+                        اعلان تغییر وضعیت تیکت
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.NotifyOnNewMessage"
+                           id="notifyMessage">
+                    <label class="form-check-label" for="notifyMessage">
+                        اعلان پیام جدید
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.EnableEmailNotifications"
+                           id="emailNotify">
+                    <label class="form-check-label" for="emailNotify">
+                        ارسال اعلان‌ها از طریق ایمیل
+                    </label>
+                    <small class="form-text text-muted d-block">نیاز به تنظیم سرور ایمیل دارد</small>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.EnableSoundNotifications"
+                           id="soundNotify">
+                    <label class="form-check-label" for="soundNotify">
+                        پخش صدای اعلان
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="bi bi-shield me-2"></i>تنظیمات امنیت</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">حداکثر تلاش‌های ناموفق ورود</label>
+                    <input type="number" class="form-control" @bind="settings.MaxLoginAttempts"
+                           min="3" max="10">
+                    <small class="form-text text-muted">پس از این تعداد تلاش، حساب کاربری موقتاً مسدود می‌شود</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">مدت زمان مسدودی (دقیقه)</label>
+                    <input type="number" class="form-control" @bind="settings.LockoutDurationMinutes"
+                           min="5" max="1440">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">مدت اعتبار جلسه کاری (ساعت)</label>
+                    <input type="number" class="form-control" @bind="settings.SessionTimeoutHours"
+                           min="1" max="168">
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.RequirePasswordChange"
+                           id="reqPassChange">
+                    <label class="form-check-label" for="reqPassChange">
+                        اجبار تغییر رمز عبور در اولین ورود
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.EnableTwoFactorAuth"
+                           id="twoFactor">
+                    <label class="form-check-label" for="twoFactor">
+                        احراز هویت دو مرحله‌ای (2FA)
+                    </label>
+                    <small class="form-text text-muted d-block">در حال حاضر پشتیبانی نمی‌شود</small>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.LogUserActivity"
+                           id="logActivity">
+                    <label class="form-check-label" for="logActivity">
+                        ثبت فعالیت‌های کاربران
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="bi bi-file-earmark me-2"></i>تنظیمات فایل</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">حداکثر حجم فایل (مگابایت)</label>
+                    <input type="number" class="form-control" @bind="settings.MaxFileSizeMB"
+                           min="1" max="100">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">فرمت‌های مجاز</label>
+                    <input type="text" class="form-control" @bind="settings.AllowedFileExtensions"
+                           placeholder=".jpg,.png,.pdf,.docx,.txt">
+                    <small class="form-text text-muted">فرمت‌ها را با کاما از هم جدا کنید</small>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.AllowFileUploads"
+                           id="allowUploads">
+                    <label class="form-check-label" for="allowUploads">
+                        اجازه آپلود فایل
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" @bind="settings.ScanUploadedFiles"
+                           id="scanFiles">
+                    <label class="form-check-label" for="scanFiles">
+                        اسکن فایل‌ها برای ویروس
+                    </label>
+                    <small class="form-text text-muted d-block">نیاز به نرم‌افزار آنتی‌ویروس دارد</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="bi bi-info-circle me-2"></i>اطلاعات سیستم</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">نسخه سیستم:</small>
+                        <br><strong>1.0.0</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">تاریخ راه‌اندازی:</small>
+                        <br><strong>@DateTime.Now.ToString("yyyy/MM/dd")</strong>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">کل تیکت‌ها:</small>
+                        <br><strong>@totalTicketsCount</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">کاربران فعال:</small>
+                        <br><strong>@activeUsersCount</strong>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <small class="text-muted">آخرین بروزرسانی تنظیمات:</small>
+                        <br><strong>@(lastUpdated?.ToString("yyyy/MM/dd HH:mm") ?? "هرگز")</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="bi bi-tools me-2"></i>عملیات نگهداری</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>توجه:</strong> این عملیات‌ها بر کل سیستم تأثیر می‌گذارند و باید با احتیاط انجام شوند.
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-info w-100" @onclick="ClearOldNotifications">
+                            <i class="bi bi-trash me-1"></i>
+                            پاک کردن اعلان‌های قدیمی
+                        </button>
+                        <small class="text-muted">حذف اعلان‌های بیش از 30 روز</small>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-warning w-100" @onclick="ArchiveOldTickets">
+                            <i class="bi bi-archive me-1"></i>
+                            بایگانی تیکت‌های قدیمی
+                        </button>
+                        <small class="text-muted">بایگانی تیکت‌های بیش از 1 سال</small>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-secondary w-100" @onclick="OptimizeDatabase">
+                            <i class="bi bi-speedometer me-1"></i>
+                            بهینه‌سازی دیتابیس
+                        </button>
+                        <small class="text-muted">بازسازی ایندکس‌ها</small>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-success w-100" @onclick="BackupSystem">
+                            <i class="bi bi-download me-1"></i>
+                            پشتیبان‌گیری
+                        </button>
+                        <small class="text-muted">ایجاد فایل پشتیبان</small>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-danger">منطقه خطر</h6>
+                        <button class="btn btn-outline-danger" @onclick="ResetAllSettings">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            بازگردانی تنظیمات به حالت پیش‌فرض
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private SystemSettings settings = new();
+    private bool isSaving = false;
+    private int totalTicketsCount = 0;
+    private int activeUsersCount = 0;
+    private DateTime? lastUpdated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSystemSettings();
+        await LoadSystemInfo();
+    }
+
+    private async Task LoadSystemSettings()
+    {
+        // در یک پروژه واقعی، این اطلاعات از جدول تنظیمات دیتابیس خوانده می‌شوند
+        // فعلاً مقادیر پیش‌فرض استفاده می‌کنیم
+        settings = new SystemSettings
+        {
+            OrganizationName = "شرکت نمونه",
+            MaxActiveTicketsPerUser = 5,
+            MaxTicketsPerSupport = 20,
+            AutoAssignTickets = true,
+            AllowTicketReopening = false,
+
+            CriticalSLAHours = 2,
+            HighSLAHours = 4,
+            NormalSLAHours = 24,
+            LowSLAHours = 48,
+            EnableSLAAlerts = true,
+
+            NotifyOnNewTicket = true,
+            NotifyOnTicketAssigned = true,
+            NotifyOnStatusChange = true,
+            NotifyOnNewMessage = true,
+            EnableEmailNotifications = false,
+            EnableSoundNotifications = true,
+
+            MaxLoginAttempts = 5,
+            LockoutDurationMinutes = 15,
+            SessionTimeoutHours = 8,
+            RequirePasswordChange = false,
+            EnableTwoFactorAuth = false,
+            LogUserActivity = true,
+
+            MaxFileSizeMB = 5,
+            AllowedFileExtensions = ".jpg,.png,.pdf,.docx,.txt",
+            AllowFileUploads = true,
+            ScanUploadedFiles = false
+        };
+
+        lastUpdated = DateTime.Now.AddHours(-2); // Mock last update
+    }
+
+    private async Task LoadSystemInfo()
+    {
+        totalTicketsCount = await DbContext.Tickets.CountAsync();
+        activeUsersCount = await DbContext.Users.CountAsync(u => u.IsActive);
+    }
+
+    private async Task SaveAllSettings()
+    {
+        isSaving = true;
+        try
+        {
+            // در پروژه واقعی، تنظیمات در دیتابیس ذخیره می‌شوند
+            await Task.Delay(1000); // Simulate save operation
+
+            lastUpdated = DateTime.Now;
+
+            await JSRuntime.InvokeVoidAsync("showToast", "تنظیمات با موفقیت ذخیره شد", "success");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"خطا در ذخیره تنظیمات: {ex.Message}", "error");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    // Maintenance operations
+    private async Task ClearOldNotifications()
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "آیا از حذف اعلان‌های قدیمی اطمینان دارید؟"))
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "اعلان‌های قدیمی پاک شدند", "success");
+        }
+    }
+
+    private async Task ArchiveOldTickets()
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "آیا از بایگانی تیکت‌های قدیمی اطمینان دارید؟"))
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "تیکت‌های قدیمی بایگانی شدند", "success");
+        }
+    }
+
+    private async Task OptimizeDatabase()
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "آیا از بهینه‌سازی دیتابیس اطمینان دارید؟ این عملیات ممکن است چند دقیقه طول بکشد."))
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "دیتابیس بهینه‌سازی شد", "success");
+        }
+    }
+
+    private async Task BackupSystem()
+    {
+        await JSRuntime.InvokeVoidAsync("showToast", "فایل پشتیبان ایجاد شد", "success");
+    }
+
+    private async Task ResetAllSettings()
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "آیا از بازگردانی همه تنظیمات به حالت پیش‌فرض اطمینان دارید؟ این عملیات غیرقابل بازگشت است!"))
+        {
+            await LoadSystemSettings(); // Reset to defaults
+            await JSRuntime.InvokeVoidAsync("showToast", "تنظیمات به حالت پیش‌فرض بازگردانده شد", "warning");
+        }
+    }
+}

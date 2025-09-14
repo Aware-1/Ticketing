@@ -1,0 +1,561 @@
+﻿@page "/support/archive"
+@attribute [Authorize(Policy = "SupportOnly")]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+
+<PageTitle>آرشیو تیکت‌ها - پشتیبانی</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">آرشیو تیکت‌های بسته شده</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-outline-secondary @(selectedPeriod == "today" ? "active" : "")"
+                    @onclick='() => FilterByPeriod("today")'>
+                امروز
+            </button>
+            <button class="btn btn-outline-secondary @(selectedPeriod == "week" ? "active" : "")"
+                    @onclick='() => FilterByPeriod("week")'>
+                هفته
+            </button>
+            <button class="btn btn-outline-secondary @(selectedPeriod == "month" ? "active" : "")"
+                    @onclick='() => FilterByPeriod("month")'>
+                ماه
+            </button>
+            <button class="btn btn-outline-secondary @(selectedPeriod == "all" ? "active" : "")"
+                    @onclick='() => FilterByPeriod("all")'>
+                همه
+            </button>
+        </div>
+        <div class="btn-group me-2">
+            <input type="text" class="form-control" placeholder="جستجو..." @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchChanged" style="width: 200px;">
+        </div>
+    </div>
+</div>
+
+<!-- Performance Summary -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h6>خلاصه عملکرد - @GetPeriodText(selectedPeriod)</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <div class="metric-card">
+                            <h4 class="text-success">@closedTicketsCount</h4>
+                            <small>بسته شده</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-card">
+                            <h4 class="text-info">@averageResponseTime.ToString("F1")</h4>
+                            <small>میانگین پاسخ (ساعت)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-card">
+                            <h4 class="text-primary">@averageResolutionTime.ToString("F1")</h4>
+                            <small>میانگین حل (ساعت)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-card">
+                            <h4 class="text-warning">@criticalTicketsCount</h4>
+                            <small>اورژانس</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-card">
+                            <h4 class="text-dark">@(closedTicketsCount > 0 ? (satisfiedCustomersCount * 100.0 / closedTicketsCount).ToString("F0") + "%" : "0%")</h4>
+                            <small>رضایت کاربران</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="metric-card">
+                            <h4 class="text-secondary">@reassignedTicketsCount</h4>
+                            <small>انتقال داده شده</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (filteredTickets == null)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">در حال بارگذاری...</span>
+        </div>
+    </div>
+}
+else if (!filteredTickets.Any())
+{
+    <div class="alert alert-info text-center">
+        <h4>تیکتی در آرشیو یافت نشد</h4>
+        <p>
+            @if (!string.IsNullOrEmpty(searchTerm))
+            {
+                <span>نتیجه‌ای برای جستجوی «@searchTerm» یافت نشد.</span>
+            }
+            else
+            {
+                <span>در @GetPeriodText(selectedPeriod) هیچ تیکت بسته‌ای ندارید.</span>
+            }
+        </p>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button class="btn btn-outline-secondary" @onclick="ClearSearch">پاک کردن جستجو</button>
+        }
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead>
+                <tr>
+                    <th>شماره</th>
+                    <th>موضوع</th>
+                    <th>کاربر</th>
+                    <th>اولویت</th>
+                    <th>دسته‌بندی</th>
+                    <th>تاریخ ایجاد</th>
+                    <th>تاریخ بسته شدن</th>
+                    <th>مدت حل</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ticket in filteredTickets)
+                {
+                    <tr class="@GetArchiveRowClass(ticket)">
+                        <td>
+                            <strong>@ticket.Id</strong>
+                            @if (GetResolutionTime(ticket).TotalHours <= 1)
+                            {
+                                <span class="badge bg-success ms-1" title="حل سریع">⚡</span>
+                            }
+                        </td>
+                        <td>
+                            <div>
+                                <strong>@ticket.Subject</strong>
+                                <br>
+                                <small class="text-muted">
+                                    @((MarkupString)TruncateHtml(ticket.Description, 40))
+                                </small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle bg-secondary me-2" style="width: 25px; height: 25px; font-size: 11px;">
+                                    @ticket.CreatedByUser.DisplayName.Substring(0, 1).ToUpper()
+                                </div>
+                                <div>
+                                    <small><strong>@ticket.CreatedByUser.DisplayName</strong></small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge @GetPriorityBadgeClass(ticket.Priority)" style="font-size: 10px;">
+                                @GetPriorityText(ticket.Priority)
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark" style="font-size: 10px;">
+                                @GetCategoryText(ticket.Category)
+                            </span>
+                        </td>
+                        <td>
+                            <small>@ticket.CreatedAt.ToString("yyyy/MM/dd")</small>
+                            <br>
+                            <small class="text-muted">@ticket.CreatedAt.ToString("HH:mm")</small>
+                        </td>
+                        <td>
+                            <small>@ticket.ClosedAt?.ToString("yyyy/MM/dd")</small>
+                            <br>
+                            <small class="text-muted">@ticket.ClosedAt?.ToString("HH:mm")</small>
+                        </td>
+                        <td>
+                            <span class="@GetResolutionTimeClass(GetResolutionTime(ticket))">
+                                @FormatDuration(GetResolutionTime(ticket))
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/tickets/@ticket.Id" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <button class="btn btn-outline-info btn-sm" @onclick="() => ViewTicketSummary(ticket)" title="خلاصه">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1)
+    {
+        <nav aria-label="صفحه‌بندی">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">قبلی</button>
+                </li>
+                @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+                {
+                    <li class="page-item @(currentPage == i ? "active" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(i)">@i</button>
+                    </li>
+                }
+                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">بعدی</button>
+                </li>
+            </ul>
+        </nav>
+    }
+}
+
+<!-- Ticket Summary Modal -->
+@if (selectedTicketSummary != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">خلاصه تیکت #@selectedTicketSummary.Id</h5>
+                    <button type="button" class="btn-close" @onclick="() => selectedTicketSummary = null"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>اطلاعات کلی</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>موضوع:</strong> @selectedTicketSummary.Subject</li>
+                                <li><strong>کاربر:</strong> @selectedTicketSummary.CreatedByUser.DisplayName</li>
+                                <li><strong>اولویت:</strong> @GetPriorityText(selectedTicketSummary.Priority)</li>
+                                <li><strong>دسته‌بندی:</strong> @GetCategoryText(selectedTicketSummary.Category)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>زمان‌بندی</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>ایجاد:</strong> @selectedTicketSummary.CreatedAt.ToString("yyyy/MM/dd HH:mm")</li>
+                                <li><strong>پذیرش:</strong> @selectedTicketSummary.AssignedAt?.ToString("yyyy/MM/dd HH:mm")</li>
+                                <li><strong>بسته شدن:</strong> @selectedTicketSummary.ClosedAt?.ToString("yyyy/MM/dd HH:mm")</li>
+                                <li><strong>مدت حل:</strong> @FormatDuration(GetResolutionTime(selectedTicketSummary))</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>توضیحات اولیه</h6>
+                    <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+                        @((MarkupString)selectedTicketSummary.Description)
+                    </div>
+                    <hr>
+                    <h6>آمار پیام‌ها</h6>
+                    <div class="row">
+                        <div class="col-4 text-center">
+                            <strong>@selectedTicketSummary.Messages.Count</strong>
+                            <br><small>کل پیام‌ها</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <strong>@selectedTicketSummary.Messages.Count(m => m.IsFromSupport)</strong>
+                            <br><small>از پشتیبان</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <strong>@selectedTicketSummary.Messages.Count(m => !m.IsFromSupport)</strong>
+                            <br><small>از کاربر</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => selectedTicketSummary = null">بستن</button>
+                    <a href="/tickets/@selectedTicketSummary.Id" class="btn btn-primary">مشاهده کامل</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Ticket>? allClosedTickets;
+    private List<Ticket>? filteredTickets;
+    private Ticket? selectedTicketSummary;
+    private User? currentUser;
+
+    private string selectedPeriod = "month";
+    private string searchTerm = string.Empty;
+    private System.Threading.Timer? searchTimer;
+
+    // Statistics
+    private int closedTicketsCount = 0;
+    private int criticalTicketsCount = 0;
+    private int satisfiedCustomersCount = 0;
+    private int reassignedTicketsCount = 0;
+    private double averageResponseTime = 0;
+    private double averageResolutionTime = 0;
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 15;
+    private int totalPages = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await UserService.GetCurrentUserAsync();
+        if (currentUser?.Role.Name != "Support") return;
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        if (currentUser == null) return;
+
+        // Load all closed tickets by current user
+        allClosedTickets = await DbContext.Tickets
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.Messages)
+                .ThenInclude(m => m.User)
+            .Where(t => t.ClosedByUserId == currentUser.Id && t.Status == TicketStatus.Closed)
+            .OrderByDescending(t => t.ClosedAt)
+            .ToListAsync();
+
+        ApplyFilters();
+        CalculateStatistics();
+    }
+
+    private void ApplyFilters()
+    {
+        if (allClosedTickets == null) return;
+
+        var query = allClosedTickets.AsEnumerable();
+
+        // Apply period filter
+        var now = DateTime.UtcNow;
+        var startDate = selectedPeriod switch
+        {
+            "today" => now.Date,
+            "week" => now.AddDays(-7),
+            "month" => now.AddDays(-30),
+            _ => DateTime.MinValue
+        };
+
+        if (selectedPeriod != "all")
+        {
+            query = query.Where(t => t.ClosedAt.HasValue && t.ClosedAt.Value >= startDate);
+        }
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(t =>
+                t.Subject.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.CreatedByUser.DisplayName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.Id.ToString().Contains(searchTerm));
+        }
+
+        var totalCount = query.Count();
+        totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+        filteredTickets = query
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
+    private void CalculateStatistics()
+    {
+        if (allClosedTickets == null) return;
+
+        var periodTickets = allClosedTickets.AsEnumerable();
+
+        // Apply same period filter as display
+        if (selectedPeriod != "all")
+        {
+            var now = DateTime.UtcNow;
+            var startDate = selectedPeriod switch
+            {
+                "today" => now.Date,
+                "week" => now.AddDays(-7),
+                "month" => now.AddDays(-30),
+                _ => DateTime.MinValue
+            };
+
+            periodTickets = periodTickets.Where(t => t.ClosedAt.HasValue && t.ClosedAt.Value >= startDate);
+        }
+
+        var tickets = periodTickets.ToList();
+
+        closedTicketsCount = tickets.Count;
+        criticalTicketsCount = tickets.Count(t => t.Priority == TicketPriority.Critical);
+
+        // Calculate average response time (from creation to first support message)
+        var responseTimes = tickets.Where(t => t.Messages.Any(m => m.IsFromSupport))
+                                  .Select(t =>
+                                  {
+                                      var firstSupportMessage = t.Messages
+                                          .Where(m => m.IsFromSupport)
+                                          .OrderBy(m => m.CreatedAt)
+                                          .FirstOrDefault();
+                                      return firstSupportMessage != null
+                                          ? (firstSupportMessage.CreatedAt - t.CreatedAt).TotalHours
+                                          : 0;
+                                  })
+                                  .Where(h => h > 0)
+                                  .ToList();
+
+        averageResponseTime = responseTimes.Any() ? responseTimes.Average() : 0;
+
+        // Calculate average resolution time
+        var resolutionTimes = tickets.Where(t => t.AssignedAt.HasValue && t.ClosedAt.HasValue)
+                                    .Select(t => (t.ClosedAt!.Value - t.AssignedAt!.Value).TotalHours)
+                                    .ToList();
+
+        averageResolutionTime = resolutionTimes.Any() ? resolutionTimes.Average() : 0;
+
+        // Mock customer satisfaction (in real app, this would come from ratings)
+        satisfiedCustomersCount = (int)(tickets.Count * 0.85); // Assume 85% satisfaction
+
+        // Mock reassigned tickets (in real app, this would be tracked)
+        reassignedTicketsCount = tickets.Count(t => t.Messages.Count > 5); // Rough estimate
+    }
+
+    private async Task FilterByPeriod(string period)
+    {
+        selectedPeriod = period;
+        currentPage = 1;
+        ApplyFilters();
+        CalculateStatistics();
+        StateHasChanged();
+    }
+
+    private async Task OnSearchChanged()
+    {
+        searchTimer?.Dispose();
+        searchTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(() =>
+            {
+                currentPage = 1;
+                ApplyFilters();
+                StateHasChanged();
+            });
+        }, null, 500, System.Threading.Timeout.Infinite);
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ViewTicketSummary(Ticket ticket)
+    {
+        selectedTicketSummary = ticket;
+        StateHasChanged();
+    }
+
+    // Helper methods
+    private TimeSpan GetResolutionTime(Ticket ticket)
+    {
+        if (!ticket.AssignedAt.HasValue || !ticket.ClosedAt.HasValue)
+            return TimeSpan.Zero;
+
+        return ticket.ClosedAt.Value - ticket.AssignedAt.Value;
+    }
+
+    private string GetPeriodText(string period) => period switch
+    {
+        "today" => "امروز",
+        "week" => "هفته گذشته",
+        "month" => "ماه گذشته",
+        "all" => "همه زمان‌ها",
+        _ => "نامشخص"
+    };
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+            return $"{(int)duration.TotalDays} روز";
+        else if (duration.TotalHours >= 1)
+            return $"{(int)duration.TotalHours} ساعت";
+        else if (duration.TotalMinutes >= 1)
+            return $"{(int)duration.TotalMinutes} دقیقه";
+        else
+            return "< 1 دقیقه";
+    }
+
+    private string GetResolutionTimeClass(TimeSpan duration)
+    {
+        if (duration.TotalHours <= 1) return "text-success fw-bold";
+        if (duration.TotalHours <= 4) return "text-success";
+        if (duration.TotalHours <= 24) return "text-info";
+        if (duration.TotalDays <= 2) return "text-warning";
+        return "text-danger";
+    }
+
+    private string GetArchiveRowClass(Ticket ticket)
+    {
+        var duration = GetResolutionTime(ticket);
+        if (duration.TotalHours <= 1) return "table-success";
+        if (ticket.Priority == TicketPriority.Critical) return "table-light border-danger";
+        return "";
+    }
+
+    private string TruncateHtml(string html, int maxLength)
+    {
+        if (string.IsNullOrEmpty(html)) return "";
+
+        var plainText = System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", "");
+        return plainText.Length <= maxLength ? plainText : plainText.Substring(0, maxLength) + "...";
+    }
+
+    private string GetPriorityBadgeClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "bg-success",
+        TicketPriority.Normal => "bg-primary",
+        TicketPriority.High => "bg-warning text-dark",
+        TicketPriority.Critical => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetPriorityText(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "کم",
+        TicketPriority.Normal => "عادی",
+        TicketPriority.High => "بالا",
+        TicketPriority.Critical => "اورژانس",
+        _ => "نامشخص"
+    };
+
+    private string GetCategoryText(TicketCategory category) => category switch
+    {
+        TicketCategory.Hardware => "سخت‌افزار",
+        TicketCategory.Software => "نرم‌افزار",
+        _ => "نامشخص"
+    };
+
+    public void Dispose()
+    {
+        searchTimer?.Dispose();
+    }
+}

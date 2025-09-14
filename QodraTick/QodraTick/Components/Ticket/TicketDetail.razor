@@ -1,0 +1,479 @@
+﻿@page "/tickets/{TicketId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<PageTitle>تیکت #@TicketId</PageTitle>
+
+@if (ticket == null)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">در حال بارگذاری...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <div>
+            <h1 class="h2">تیکت #@ticket.Id</h1>
+            <h4>@ticket.Subject</h4>
+        </div>
+        <div>
+            <span class="badge @GetStatusBadgeClass(ticket.Status) fs-6 me-2">
+                @GetStatusText(ticket.Status)
+            </span>
+            <span class="badge @GetPriorityBadgeClass(ticket.Priority) fs-6">
+                @GetPriorityText(ticket.Priority)
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Original Ticket Content -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between">
+                    <div>
+                        <strong>@ticket.CreatedByUser.DisplayName</strong>
+                        <small class="text-muted">- @ticket.CreatedAt.ToString("yyyy/MM/dd HH:mm")</small>
+                    </div>
+                    <small class="text-muted">@GetCategoryText(ticket.Category)</small>
+                </div>
+                <div class="card-body">
+                    @((MarkupString)ticket.Description)
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            @if (ticket.Status != TicketStatus.Open)
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h5>گفتگو</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Messages Container -->
+                        <div id="messages-container" class="p-3" style="height: 400px; overflow-y: auto;">
+                            @if (messages.Any())
+                            {
+                                @foreach (var message in messages)
+                                {
+                                    <div class="mb-3 @(message.IsFromSupport ? "text-start" : "text-end")">
+                                        <div class="d-inline-block p-2 rounded @(message.IsFromSupport ? "bg-light" : "bg-primary text-white")" style="max-width: 70%;">
+                                            <div>@((MarkupString)message.Content)</div>
+                                            <small class="@(message.IsFromSupport ? "text-muted" : "text-white-50")">
+                                                @message.User.DisplayName - @message.CreatedAt.ToString("HH:mm")
+                                            </small>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted">
+                                    <i class="bi bi-chat fs-1"></i>
+                                    <p>هنوز پیامی رد و بدل نشده است</p>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Message Input -->
+                        @if (ticket.Status == TicketStatus.InProgress && CanSendMessage())
+                        {
+                            <div class="border-top p-3">
+                                <div class="input-group">
+                                    <TinyMceEditor @bind-Value="newMessage" Height="150px" AllowImageUpload="true" />
+                                </div>
+                                <div class="mt-2">
+                                    <button class="btn btn-primary" @onclick="SendMessage" disabled="@isLoading">
+                                        @if (isLoading)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-send me-1"></i>
+                                        }
+                                        ارسال پیام
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else if (ticket.Status == TicketStatus.Open)
+                        {
+                            <div class="text-center p-3 bg-light">
+                                <i class="bi bi-hourglass-split"></i>
+                                پس از پذیرش تیکت توسط پشتیبان، امکان گفتگو فراهم خواهد شد
+                            </div>
+                        }
+                        else if (ticket.Status == TicketStatus.Closed)
+                        {
+                            <div class="text-center p-3 bg-success text-white">
+                                <i class="bi bi-check-circle"></i>
+                                این تیکت بسته شده است
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-md-4">
+            <!-- Ticket Actions -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6>اطلاعات تیکت</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>ایجاد کننده:</strong> @ticket.CreatedByUser.DisplayName</p>
+                    <p><strong>تاریخ ایجاد:</strong> @ticket.CreatedAt.ToString("yyyy/MM/dd HH:mm")</p>
+
+                    @if (ticket.AssignedToUser != null)
+                    {
+                        <p><strong>پشتیبان:</strong> @ticket.AssignedToUser.DisplayName</p>
+                        <p><strong>تاریخ پذیرش:</strong> @ticket.AssignedAt?.ToString("yyyy/MM/dd HH:mm")</p>
+                    }
+
+                    @if (ticket.ClosedAt.HasValue)
+                    {
+                        <p><strong>تاریخ بسته شدن:</strong> @ticket.ClosedAt?.ToString("yyyy/MM/dd HH:mm")</p>
+                    }
+
+                    <p><strong>آخرین فعالیت:</strong> @ticket.LastActivityAt.ToString("yyyy/MM/dd HH:mm")</p>
+                </div>
+            </div>
+
+            <!-- Support Actions -->
+            @if (currentUser?.Role.Name == "Support" || currentUser?.Role.Name == "Admin")
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h6>عملیات</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (ticket.Status == TicketStatus.Open)
+                        {
+                            <button class="btn btn-success w-100 mb-2" @onclick="AcceptTicket" disabled="@isLoading">
+                                <i class="bi bi-check-circle me-1"></i>
+                                پذیرش تیکت
+                            </button>
+                        }
+                        else if (ticket.Status == TicketStatus.InProgress)
+                        {
+                            <button class="btn btn-success w-100 mb-2" @onclick="CloseTicket" disabled="@isLoading">
+                                <i class="bi bi-check-square me-1"></i>
+                                بستن تیکت
+                            </button>
+
+                            @if (supportUsers.Any())
+                            {
+                                <hr />
+                                <label class="form-label">انتقال به پشتیبان:</label>
+                                <select class="form-select mb-2" @bind="selectedSupportId">
+                                    <option value="0">-- انتخاب کنید --</option>
+                                    @foreach (var support in supportUsers.Where(s => s.Id != ticket.AssignedToUserId))
+                                    {
+                                        <option value="@support.Id">@support.DisplayName</option>
+                                    }
+                                </select>
+                                <button class="btn btn-warning w-100" @onclick="ReassignTicket"
+                                        disabled="@(isLoading || selectedSupportId == 0)">
+                                    <i class="bi bi-arrow-right me-1"></i>
+                                    انتقال تیکت
+                                </button>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="notificationToast" class="toast" role="alert">
+        <div class="toast-header">
+            <strong class="me-auto">اعلان</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastBody">
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int TicketId { get; set; }
+
+    private Ticket? ticket;
+    private List<Message> messages = new();
+    private List<User> supportUsers = new();
+    private User? currentUser;
+    private string newMessage = string.Empty;
+    private bool isLoading = false;
+    private int selectedSupportId = 0;
+
+    private IJSObjectReference? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await UserService.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        await LoadTicket();
+        await LoadSupportUsers();
+        await InitializeSignalR();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task LoadTicket()
+    {
+        ticket = await DbContext.Tickets
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.AssignedToUser)
+            .Include(t => t.Messages)
+                .ThenInclude(m => m.User)
+            .FirstOrDefaultAsync(t => t.Id == TicketId);
+
+        if (ticket == null)
+        {
+            Navigation.NavigateTo("/tickets/my");
+            return;
+        }
+
+        // Check access
+        bool hasAccess = ticket.CreatedByUserId == currentUser!.Id ||
+                        ticket.AssignedToUserId == currentUser.Id ||
+                        currentUser.Role.Name == "Admin";
+
+        if (!hasAccess)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        messages = ticket.Messages.OrderBy(m => m.CreatedAt).ToList();
+    }
+
+    private async Task LoadSupportUsers()
+    {
+        if (currentUser?.Role.Name == "Support" || currentUser?.Role.Name == "Admin")
+        {
+            supportUsers = await UserService.GetSupportUsersAsync();
+        }
+    }
+
+    private async Task InitializeSignalR()
+    {
+        hubConnection = await JSRuntime.InvokeAsync<IJSObjectReference>("initializeTicketHub",
+            DotNetObjectReference.Create(this), TicketId);
+    }
+
+    [JSInvokable]
+    public async Task OnMessageReceived(object messageData)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(messageData);
+        var message = System.Text.Json.JsonSerializer.Deserialize<MessageDTO>(json);
+
+        if (message != null)
+        {
+            // Add message to list (could also reload from database)
+            await InvokeAsync(StateHasChanged);
+            await ScrollToBottom();
+            await ShowNotification("پیام جدید دریافت شد");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnTicketUpdated()
+    {
+        await LoadTicket();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(newMessage)) return;
+
+        isLoading = true;
+        try
+        {
+            await hubConnection!.InvokeVoidAsync("sendMessage", TicketId, newMessage);
+            newMessage = string.Empty;
+
+            // Reload messages
+            await LoadTicket();
+            await ScrollToBottom();
+        }
+        catch (Exception ex)
+        {
+            await ShowNotification($"خطا در ارسال پیام: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AcceptTicket()
+    {
+        isLoading = true;
+        try
+        {
+            await hubConnection!.InvokeVoidAsync("acceptTicket", TicketId);
+            await LoadTicket();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CloseTicket()
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "آیا از بستن این تیکت اطمینان دارید؟"))
+        {
+            isLoading = true;
+            try
+            {
+                await hubConnection!.InvokeVoidAsync("closeTicket", TicketId);
+                await LoadTicket();
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ReassignTicket()
+    {
+        if (selectedSupportId == 0) return;
+
+        isLoading = true;
+        try
+        {
+            await hubConnection!.InvokeVoidAsync("reassignTicket", TicketId, selectedSupportId);
+            await LoadTicket();
+            selectedSupportId = 0;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool CanSendMessage()
+    {
+        if (ticket?.Status != TicketStatus.InProgress) return false;
+
+        return ticket.CreatedByUserId == currentUser?.Id ||
+               ticket.AssignedToUserId == currentUser?.Id ||
+               currentUser?.Role.Name == "Admin";
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", "messages-container");
+        }
+        catch { /* Ignore scroll errors */ }
+    }
+
+    private async Task ShowNotification(string message)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", message);
+        }
+        catch { /* Ignore notification errors */ }
+    }
+
+    // Helper methods for styling
+    private string GetStatusBadgeClass(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "bg-warning text-dark",
+        TicketStatus.InProgress => "bg-info",
+        TicketStatus.Closed => "bg-success",
+        TicketStatus.Rejected => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetStatusText(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "باز",
+        TicketStatus.InProgress => "در حال بررسی",
+        TicketStatus.Closed => "بسته شده",
+        TicketStatus.Rejected => "رد شده",
+        _ => "نامشخص"
+    };
+
+    private string GetPriorityBadgeClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "bg-success",
+        TicketPriority.Normal => "bg-primary",
+        TicketPriority.High => "bg-warning text-dark",
+        TicketPriority.Critical => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetPriorityText(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "کم",
+        TicketPriority.Normal => "عادی",
+        TicketPriority.High => "بالا",
+        TicketPriority.Critical => "اورژانس",
+        _ => "نامشخص"
+    };
+
+    private string GetCategoryText(TicketCategory category) => category switch
+    {
+        TicketCategory.Hardware => "سخت‌افزار",
+        TicketCategory.Software => "نرم‌افزار",
+        _ => "نامشخص"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            try
+            {
+                await hubConnection.InvokeVoidAsync("leaveTicket", TicketId.ToString());
+                await hubConnection.DisposeAsync();
+            }
+            catch { /* Ignore disposal errors */ }
+        }
+    }
+
+    public class MessageDTO
+    {
+        public int Id { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public string CreatedAt { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public bool IsFromSupport { get; set; }
+        public int UserId { get; set; }
+    }
+}

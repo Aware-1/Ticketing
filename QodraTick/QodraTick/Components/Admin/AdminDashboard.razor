@@ -1,0 +1,572 @@
+﻿@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+
+<div class="row">
+    <!-- Overview Cards -->
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="bi bi-ticket-perforated-fill text-primary" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">کل تیکت‌ها</h5>
+                <h3 class="text-primary">@totalTickets</h3>
+                <small class="text-muted">همه زمان‌ها</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="bi bi-hourglass-split text-warning" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">در انتظار</h5>
+                <h3 class="text-warning">@pendingTickets</h3>
+                <small class="text-muted">نیاز به توجه</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="bi bi-gear-fill text-info" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">در حال کار</h5>
+                <h3 class="text-info">@inProgressTickets</h3>
+                <small class="text-muted">توسط پشتیبانان</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">حل شده</h5>
+                <h3 class="text-success">@resolvedTickets</h3>
+                <small class="text-muted">
+                    @if (totalTickets > 0)
+                    {
+                        <span>(@((resolvedTickets * 100.0 / totalTickets).ToString("F1"))%)</span>
+                    }
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Support Team Performance -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>عملکرد تیم پشتیبانی</h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary @(selectedPeriod == "today" ? "active" : "")"
+                            @onclick='() => ChangePeriod("today")'>
+                        امروز
+                    </button>
+                    <button class="btn btn-outline-secondary @(selectedPeriod == "week" ? "active" : "")"
+                            @onclick='() => ChangePeriod("week")'>
+                        هفته
+                    </button>
+                    <button class="btn btn-outline-secondary @(selectedPeriod == "month" ? "active" : "")"
+                            @onclick='() => ChangePeriod(" month")'>
+                        ماه
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (supportStats?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>پشتیبان</th>
+                                    <th>تیکت‌های فعال</th>
+                                    <th>حل شده</th>
+                                    <th>واگذار شده</th>
+                                    <th>میانگین پاسخ (ساعت)</th>
+                                    <th>وضعیت</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var stat in supportStats.OrderByDescending(s => s.ResolvedCount))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-circle me-2 @GetUserStatusClass(stat.IsOnline)">
+                                                    @stat.UserName.Substring(0, 1).ToUpper()
+                                                </div>
+                                                <div>
+                                                    <strong>@stat.UserName</strong>
+                                                    @if (stat.IsOnline)
+                                                    {
+                                                        <small class="text-success d-block">آنلاین</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <small class="text-muted d-block">آفلاین</small>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">@stat.ActiveTickets</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">@stat.ResolvedCount</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(stat.ReassignedCount > 0 ? "bg-warning" : "bg-light")">
+                                                @stat.ReassignedCount
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (stat.AverageResponseTime.HasValue)
+                                            {
+                                                <span class="badge @GetResponseTimeBadge(stat.AverageResponseTime.Value)">
+                                                    @stat.AverageResponseTime.Value.ToString("F1")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @GetWorkloadStatus(stat.ActiveTickets, stat.ResolvedCount)
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-people fs-1 text-muted"></i>
+                        <p class="text-muted">هیچ اطلاعات عملکردی موجود نیست</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category and Priority Analysis -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6>توزیع بر اساس دسته‌بندی</h6>
+            </div>
+            <div class="card-body">
+                @if (categoryStats?.Any() == true)
+                {
+                    @foreach (var category in categoryStats)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>@category.CategoryName</span>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-2" style="width: 120px;">
+                                    <div class="progress-bar bg-primary"
+                                         style="width: @(totalTickets > 0 ? (category.Count * 100.0 / totalTickets).ToString("F1") : "0")%">
+                                    </div>
+                                </div>
+                                <strong>@category.Count</strong>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6>توزیع بر اساس اولویت</h6>
+            </div>
+            <div class="card-body">
+                @if (priorityStats?.Any() == true)
+                {
+                    @foreach (var priority in priorityStats)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>@priority.PriorityName</span>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-2" style="width: 120px;">
+                                    <div class="progress-bar @priority.ProgressClass"
+                                         style="width: @(totalTickets > 0 ? (priority.Count * 100.0 / totalTickets).ToString("F1") : "0")%">
+                                    </div>
+                                </div>
+                                <strong>@priority.Count</strong>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+@if (recentActivities?.Any() == true)
+{
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6>فعالیت‌های اخیر</h6>
+                </div>
+                <div class="card-body">
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        @foreach (var activity in recentActivities.Take(20))
+                        {
+                            <div class="d-flex align-items-start mb-3 pb-2 border-bottom">
+                                <div class="avatar-circle me-3 @GetActivityStatusClass(activity.ActivityType)">
+                                    <i class="@GetActivityIcon(activity.ActivityType)"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>@activity.Description</strong>
+                                        <small class="text-muted">@GetRelativeTime(activity.CreatedAt)</small>
+                                    </div>
+                                    <small class="text-muted">
+                                        توسط @activity.UserName - تیکت #@activity.TicketId
+                                    </small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Auto-refresh indicator -->
+<div class="position-fixed bottom-0 end-0 p-3">
+    <small class="text-muted">
+        <i class="bi bi-arrow-clockwise @(isAutoRefreshing ? "spin" : "")"></i>
+        آخرین بروزرسانی: @lastRefreshTime.ToString("HH:mm:ss")
+    </small>
+</div>
+
+@code {
+    private int totalTickets = 0;
+    private int pendingTickets = 0;
+    private int inProgressTickets = 0;
+    private int resolvedTickets = 0;
+    private bool isAutoRefreshing = false;
+    private DateTime lastRefreshTime = DateTime.Now;
+    private string selectedPeriod = "today";
+
+    private List<SupportStatistic>? supportStats;
+    private List<CategoryStatistic>? categoryStats;
+    private List<PriorityStatistic>? priorityStats;
+    private List<RecentActivity>? recentActivities;
+
+    private Timer? refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+
+        // Auto-refresh every 30 seconds
+        refreshTimer = new Timer(async _ => await AutoRefresh(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task LoadDashboardData()
+    {
+        await LoadOverviewStats();
+        await LoadSupportStats();
+        await LoadCategoryStats();
+        await LoadPriorityStats();
+        await LoadRecentActivities();
+
+        lastRefreshTime = DateTime.Now;
+        StateHasChanged();
+    }
+
+    private async Task LoadOverviewStats()
+    {
+        totalTickets = await DbContext.Tickets.CountAsync();
+        pendingTickets = await DbContext.Tickets.CountAsync(t => t.Status == TicketStatus.Open);
+        inProgressTickets = await DbContext.Tickets.CountAsync(t => t.Status == TicketStatus.InProgress);
+        resolvedTickets = await DbContext.Tickets.CountAsync(t => t.Status == TicketStatus.Closed);
+    }
+
+    private async Task LoadSupportStats()
+    {
+        var supportUsers = await UserService.GetSupportUsersAsync();
+        supportStats = new List<SupportStatistic>();
+
+        foreach (var user in supportUsers)
+        {
+            var activeCount = await DbContext.Tickets
+                .CountAsync(t => t.AssignedToUserId == user.Id && t.Status == TicketStatus.InProgress);
+
+            var resolvedCount = await GetResolvedCountForPeriod(user.Id);
+            var reassignedCount = await GetReassignedCountForPeriod(user.Id);
+            var avgResponseTime = await GetAverageResponseTime(user.Id);
+
+            supportStats.Add(new SupportStatistic
+            {
+                UserId = user.Id,
+                UserName = user.DisplayName,
+                ActiveTickets = activeCount,
+                ResolvedCount = resolvedCount,
+                ReassignedCount = reassignedCount,
+                AverageResponseTime = avgResponseTime,
+                IsOnline = IsUserOnline(user.Id) // This would need SignalR integration
+            });
+        }
+    }
+
+    private async Task<int> GetResolvedCountForPeriod(int userId)
+    {
+        var startDate = selectedPeriod switch
+        {
+            "today" => DateTime.UtcNow.Date,
+            "week" => DateTime.UtcNow.AddDays(-7),
+            "month" => DateTime.UtcNow.AddDays(-30),
+            _ => DateTime.UtcNow.Date
+        };
+
+        return await DbContext.Tickets
+            .CountAsync(t => t.ClosedByUserId == userId &&
+                           t.ClosedAt.HasValue &&
+                           t.ClosedAt.Value >= startDate);
+    }
+
+    private async Task<int> GetReassignedCountForPeriod(int userId)
+    {
+        // This would need a reassignment tracking table
+        // For now, return 0
+        return 0;
+    }
+
+    private async Task<double?> GetAverageResponseTime(int userId)
+    {
+        var userTickets = await DbContext.Tickets
+            .Where(t => t.AssignedToUserId == userId &&
+                       t.AssignedAt.HasValue &&
+                       t.Status == TicketStatus.Closed)
+            .ToListAsync();
+
+        if (!userTickets.Any()) return null;
+
+        var totalHours = userTickets
+            .Select(t => (t.AssignedAt!.Value - t.CreatedAt).TotalHours)
+            .Average();
+
+        return totalHours;
+    }
+
+    private bool IsUserOnline(int userId)
+    {
+        // This would integrate with SignalR to track online users
+        // For now, return random status
+        return new Random().Next(0, 2) == 1;
+    }
+
+    private async Task LoadCategoryStats()
+    {
+        var stats = await DbContext.Tickets
+            .GroupBy(t => t.Category)
+            .Select(g => new { Category = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        categoryStats = stats.Select(s => new CategoryStatistic
+        {
+            Category = s.Category,
+            CategoryName = GetCategoryText(s.Category),
+            Count = s.Count
+        }).ToList();
+    }
+
+    private async Task LoadPriorityStats()
+    {
+        var stats = await DbContext.Tickets
+            .GroupBy(t => t.Priority)
+            .Select(g => new { Priority = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        priorityStats = stats.Select(s => new PriorityStatistic
+        {
+            Priority = s.Priority,
+            PriorityName = GetPriorityText(s.Priority),
+            Count = s.Count,
+            ProgressClass = GetPriorityProgressClass(s.Priority)
+        }).ToList();
+    }
+
+    private async Task LoadRecentActivities()
+    {
+        var activities = new List<RecentActivity>();
+
+        // Recent ticket creations
+        var recentTickets = await DbContext.Tickets
+            .Include(t => t.CreatedByUser)
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(10)
+            .ToListAsync();
+
+        activities.AddRange(recentTickets.Select(t => new RecentActivity
+        {
+            ActivityType = "created",
+            Description = $"تیکت جدید: {t.Subject}",
+            UserName = t.CreatedByUser.DisplayName,
+            TicketId = t.Id,
+            CreatedAt = t.CreatedAt
+        }));
+
+        // Recent ticket closures
+        var closedTickets = await DbContext.Tickets
+            .Include(t => t.ClosedByUser)
+            .Where(t => t.ClosedAt.HasValue)
+            .OrderByDescending(t => t.ClosedAt)
+            .Take(10)
+            .ToListAsync();
+
+        activities.AddRange(closedTickets.Select(t => new RecentActivity
+        {
+            ActivityType = "closed",
+            Description = $"تیکت بسته شد: {t.Subject}",
+            UserName = t.ClosedByUser?.DisplayName ?? "سیستم",
+            TicketId = t.Id,
+            CreatedAt = t.ClosedAt!.Value
+        }));
+
+        recentActivities = activities.OrderByDescending(a => a.CreatedAt).ToList();
+    }
+
+    private async Task ChangePeriod(string period)
+    {
+        selectedPeriod = period;
+        await LoadSupportStats();
+        StateHasChanged();
+    }
+
+    private async Task AutoRefresh()
+    {
+        isAutoRefreshing = true;
+        await InvokeAsync(async () =>
+        {
+            await LoadDashboardData();
+            isAutoRefreshing = false;
+        });
+    }
+
+    // Helper methods
+    private string GetUserStatusClass(bool isOnline) => isOnline ? "bg-success" : "bg-secondary";
+
+    private string GetResponseTimeBadge(double hours) => hours switch
+    {
+        <= 1 => "bg-success",
+        <= 4 => "bg-warning",
+        _ => "bg-danger"
+    };
+
+    private string GetWorkloadStatus(int active, int resolved)
+    {
+        if (active > 5) return "🔴 پرکار";
+        if (active > 2) return "🟡 متوسط";
+        if (resolved > 0) return "🟢 فعال";
+        return "⚪ آزاد";
+    }
+
+    private string GetActivityStatusClass(string activityType) => activityType switch
+    {
+        "created" => "bg-primary",
+        "closed" => "bg-success",
+        "assigned" => "bg-info",
+        _ => "bg-secondary"
+    };
+
+    private string GetActivityIcon(string activityType) => activityType switch
+    {
+        "created" => "bi-plus-circle",
+        "closed" => "bi-check-circle",
+        "assigned" => "bi-person-check",
+        _ => "bi-circle"
+    };
+
+    private string GetRelativeTime(DateTime dateTime)
+    {
+        var diff = DateTime.UtcNow - dateTime;
+        if (diff.TotalMinutes < 1) return "همین الان";
+        if (diff.TotalMinutes < 60) return $"{diff.TotalMinutes:F0} دقیقه پیش";
+        if (diff.TotalHours < 24) return $"{diff.TotalHours:F0} ساعت پیش";
+        return $"{diff.TotalDays:F0} روز پیش";
+    }
+
+    private string GetCategoryText(TicketCategory category) => category switch
+    {
+        TicketCategory.Hardware => "سخت‌افزار",
+        TicketCategory.Software => "نرم‌افزار",
+        _ => "نامشخص"
+    };
+
+    private string GetPriorityText(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "کم",
+        TicketPriority.Normal => "عادی",
+        TicketPriority.High => "بالا",
+        TicketPriority.Critical => "اورژانس",
+        _ => "نامشخص"
+    };
+
+    private string GetPriorityProgressClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "bg-success",
+        TicketPriority.Normal => "bg-primary",
+        TicketPriority.High => "bg-warning",
+        TicketPriority.Critical => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+
+    // Data classes
+    public class SupportStatistic
+    {
+        public int UserId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public int ActiveTickets { get; set; }
+        public int ResolvedCount { get; set; }
+        public int ReassignedCount { get; set; }
+        public double? AverageResponseTime { get; set; }
+        public bool IsOnline { get; set; }
+    }
+
+    public class CategoryStatistic
+    {
+        public TicketCategory Category { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+
+    public class PriorityStatistic
+    {
+        public TicketPriority Priority { get; set; }
+        public string PriorityName { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public string ProgressClass { get; set; } = string.Empty;
+    }
+
+    public class RecentActivity
+    {
+        public string ActivityType { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public int TicketId { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+}

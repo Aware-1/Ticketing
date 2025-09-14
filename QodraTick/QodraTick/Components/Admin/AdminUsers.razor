@@ -1,0 +1,862 @@
+﻿@page "/admin/users"
+@using System.ComponentModel.DataAnnotations
+@attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>مدیریت کاربران</PageTitle>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">مدیریت کاربران</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-outline-secondary @(selectedRole == "all" ? "active" : "")"
+                    @onclick='() => FilterByRole("all")'>
+                همه
+            </button>
+            <button class="btn btn-outline-primary @(selectedRole == "User" ? "active" : "")"
+                    @onclick='() => FilterByRole("User")'>
+                کاربران
+            </button>
+            <button class="btn btn-outline-info @(selectedRole == "Support" ? "active" : "")"
+                    @onclick='() => FilterByRole("Support")'>
+                پشتیبان
+            </button>
+            <button class="btn btn-outline-warning @(selectedRole == "Admin" ? "active" : "")"
+                    @onclick='() => FilterByRole("Admin")'>
+                مدیر
+            </button>
+        </div>
+        <div class="btn-group me-2">
+            <input type="text" class="form-control" placeholder="جستجوی کاربر..."
+                   @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchChanged" style="width: 200px;">
+        </div>
+        <button class="btn btn-primary" @onclick="ShowAddUserModal">
+            <i class="bi bi-person-plus me-1"></i>
+            کاربر جدید
+        </button>
+    </div>
+</div>
+
+<!-- User Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="bi bi-people-fill text-primary" style="font-size: 2rem;"></i>
+                <h4 class="text-primary mt-2">@totalUsers</h4>
+                <small>کل کاربران</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="bi bi-person-check-fill text-success" style="font-size: 2rem;"></i>
+                <h4 class="text-success mt-2">@activeUsers</h4>
+                <small>فعال</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="bi bi-headset text-info" style="font-size: 2rem;"></i>
+                <h4 class="text-info mt-2">@supportCount</h4>
+                <small>پشتیبان</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="bi bi-shield-fill text-warning" style="font-size: 2rem;"></i>
+                <h4 class="text-warning mt-2">@adminCount</h4>
+                <small>مدیر</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (filteredUsers == null)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">در حال بارگذاری...</span>
+        </div>
+    </div>
+}
+else if (!filteredUsers.Any())
+{
+    <div class="alert alert-info text-center">
+        <h4>کاربری یافت نشد</h4>
+        <p>
+            @if (!string.IsNullOrEmpty(searchTerm))
+            {
+                <span>نتیجه‌ای برای جستجوی «@searchTerm» یافت نشد.</span>
+            }
+            else
+            {
+                <span>هیچ کاربری در دسته‌بندی انتخابی موجود نیست.</span>
+            }
+        </p>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button class="btn btn-outline-secondary" @onclick="ClearSearch">پاک کردن جستجو</button>
+        }
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>کاربر</th>
+                    <th>نقش</th>
+                    <th>وضعیت</th>
+                    <th>آخرین فعالیت</th>
+                    <th>آمار تیکت</th>
+                    <th>عملکرد</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in filteredUsers)
+                {
+                    <tr class="@(user.IsActive ? "" : "table-secondary")">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle @GetRoleColor(user.Role.Name) me-3">
+                                    @user.DisplayName.Substring(0, 1).ToUpper()
+                                </div>
+                                <div>
+                                    <strong>@user.DisplayName</strong>
+                                    <br>
+                                    <small class="text-muted">@user.Username</small>
+                                    <br>
+                                    <small class="text-muted">@user.Email</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge @GetRoleBadgeClass(user.Role.Name) fs-6">
+                                @GetRoleText(user.Role.Name)
+                            </span>
+                            @if (user.Role.Name == "Support")
+                            {
+                                <br>
+                                <small class="text-muted">@GetSupportWorkloadStatus(user.Id)</small>
+                            }
+                        </td>
+                        <td>
+                            @if (user.IsActive)
+                            {
+                                <span class="badge bg-success">فعال</span>
+                                @if (IsUserOnline(user.Id))
+                                {
+                                    <span class="badge bg-info ms-1">آنلاین</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">غیرفعال</span>
+                            }
+                        </td>
+                        <td>
+                            <small>@GetLastActivity(user.Id)</small>
+                        </td>
+                        <td>
+                            @{
+                                var stats = GetUserTicketStats(user.Id);
+                            }
+                            <div class="small">
+                                <div>ایجاد: <strong>@stats.Created</strong></div>
+                                @if (user.Role.Name == "Support")
+                                {
+                                    <div>حل شده: <strong class="text-success">@stats.Resolved</strong></div>
+                                    <div>فعال: <strong class="text-info">@stats.Active</strong></div>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            @if (user.Role.Name == "Support")
+                            {
+                                var performance = GetSupportPerformance(user.Id);
+                                <div class="performance-indicator">
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress me-2" style="width: 50px; height: 6px;">
+                                            <div class="progress-bar @GetPerformanceColor(performance)"
+                                                 style="width: @(performance)%"></div>
+                                        </div>
+                                        <small>@performance.ToString("F0")%</small>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <small class="text-muted">-</small>
+                            }
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" @onclick="() => ShowEditUserModal(user)" title="ویرایش">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-@(user.IsActive ? "warning" : "success")"
+                                        @onclick="() => ToggleUserStatus(user)"
+                                        title="@(user.IsActive ? "غیرفعال کردن" : "فعال کردن")" disabled="@isProcessing">
+                                    <i class="bi bi-@(user.IsActive ? "pause" : "play")"></i>
+                                </button>
+                                @if (user.Role.Name == "Support")
+                                {
+                                    <button class="btn btn-outline-info" @onclick="() => ShowUserStats(user)" title="آمار تفصیلی">
+                                        <i class="bi bi-graph-up"></i>
+                                    </button>
+                                }
+                                @if (user.Role.Name != "Admin")
+                                {
+                                    <button class="btn btn-outline-danger" @onclick="() => ResetUserPassword(user)"
+                                            title="بازنشانی رمز" disabled="@isProcessing">
+                                        <i class="bi bi-key"></i>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1)
+    {
+        <nav aria-label="صفحه‌بندی">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">قبلی</button>
+                </li>
+                @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+                {
+                    <li class="page-item @(currentPage == i ? "active" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(i)">@i</button>
+                    </li>
+                }
+                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">بعدی</button>
+                </li>
+            </ul>
+        </nav>
+    }
+}
+
+<!-- Add/Edit User Modal -->
+@if (showUserModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(editingUser?.Id > 0 ? "ویرایش کاربر" : "کاربر جدید")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseUserModal"></button>
+                </div>
+                <EditForm Model="@editingUser" OnValidSubmit="SaveUser">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <ValidationSummary class="alert alert-danger" />
+
+                        <div class="mb-3">
+                            <label class="form-label">نام نمایشی *</label>
+                            <InputText @bind-Value="editingUser.DisplayName" class="form-control" />
+                            <ValidationMessage For="@(() => editingUser.DisplayName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">نام کاربری *</label>
+                            <InputText @bind-Value="editingUser.Username" class="form-control" disabled="@(editingUser.Id > 0)" />
+                            <ValidationMessage For="@(() => editingUser.Username)" />
+                            @if (editingUser.Id > 0)
+                            {
+                                <small class="form-text text-muted">نام کاربری قابل تغییر نیست</small>
+                            }
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">ایمیل *</label>
+                            <InputText @bind-Value="editingUser.Email" class="form-control" />
+                            <ValidationMessage For="@(() => editingUser.Email)" />
+                        </div>
+
+                        @if (editingUser.Id == 0)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">رمز عبور *</label>
+                                <InputText type="password" @bind-Value="editingUser.Password" class="form-control" />
+                                <ValidationMessage For="@(() => editingUser.Password)" />
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">نقش *</label>
+                            <InputSelect @bind-Value="editingUser.RoleId" class="form-select">
+                                @if (availableRoles != null)
+                                {
+                                    @foreach (var role in availableRoles)
+                                    {
+                                        <option value="@role.Id">@GetRoleText(role.Name)</option>
+                                    }
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => editingUser.RoleId)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <InputCheckbox @bind-Value="editingUser.IsActive" class="form-check-input" />
+                                <label class="form-check-label">کاربر فعال باشد</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseUserModal">انصراف</button>
+                        <button type="submit" class="btn btn-primary" disabled="@isProcessing">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            ذخیره
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- User Stats Modal -->
+@if (showStatsModal && selectedUserStats != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">آمار تفصیلی - @selectedUserStats.UserName</h5>
+                    <button type="button" class="btn-close" @onclick="() => showStatsModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-primary">@selectedUserStats.TotalResolved</h4>
+                            <small>کل حل شده</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-info">@selectedUserStats.ActiveTickets</h4>
+                            <small>فعال</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-success">@selectedUserStats.AvgResolutionTime.ToString("F1")</h4>
+                            <small>میانگین حل (ساعت)</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-warning">@selectedUserStats.CustomerRating.ToString("F1")</h4>
+                            <small>امتیاز مشتری</small>
+                        </div>
+                    </div>
+
+                    <h6>عملکرد هفتگی</h6>
+                    <div class="progress-container">
+                        @foreach (var day in selectedUserStats.WeeklyPerformance)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>@day.Day</span>
+                                <div class="progress flex-fill mx-2" style="max-width: 200px;">
+                                    <div class="progress-bar bg-success" style="width: @(day.Resolved * 10)%"></div>
+                                </div>
+                                <small>@day.Resolved</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showStatsModal = false">بستن</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<User>? allUsers;
+    private List<User>? filteredUsers;
+    private List<Role>? availableRoles;
+    private string selectedRole = "all";
+    private string searchTerm = string.Empty;
+    private bool isProcessing = false;
+    private System.Threading.Timer? searchTimer;
+
+    // Statistics
+    private int totalUsers = 0;
+    private int activeUsers = 0;
+    private int supportCount = 0;
+    private int adminCount = 0;
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages = 1;
+
+    // Modal states
+    private bool showUserModal = false;
+    private bool showStatsModal = false;
+    private UserEditModel editingUser = new();
+    private UserDetailedStats? selectedUserStats;
+
+    // Cache for ticket stats
+    private Dictionary<int, UserTicketStats> userStatsCache = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+        await LoadRoles();
+        await LoadUserStatistics();
+    }
+
+    private async Task LoadUsers()
+    {
+        allUsers = await DbContext.Users
+            .Include(u => u.Role)
+            .OrderBy(u => u.DisplayName)
+            .ToListAsync();
+
+        ApplyFilters();
+        CalculateStatistics();
+    }
+
+    private async Task LoadRoles()
+    {
+        availableRoles = await UserService.GetRolesAsync();
+    }
+
+    private async Task LoadUserStatistics()
+    {
+        if (allUsers == null) return;
+
+        // Load ticket statistics for each user
+        foreach (var user in allUsers)
+        {
+            var createdTickets = await DbContext.Tickets.CountAsync(t => t.CreatedByUserId == user.Id);
+            var resolvedTickets = await DbContext.Tickets.CountAsync(t => t.ClosedByUserId == user.Id);
+            var activeTickets = await DbContext.Tickets.CountAsync(t => t.AssignedToUserId == user.Id &&
+                                                                        t.Status == TicketStatus.InProgress);
+
+            userStatsCache[user.Id] = new UserTicketStats
+            {
+                Created = createdTickets,
+                Resolved = resolvedTickets,
+                Active = activeTickets
+            };
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (allUsers == null) return;
+
+        var query = allUsers.AsEnumerable();
+
+        // Role filter
+        if (selectedRole != "all")
+        {
+            query = query.Where(u => u.Role.Name == selectedRole);
+        }
+
+        // Search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(u =>
+                u.DisplayName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                u.Username.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var totalCount = query.Count();
+        totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+        filteredUsers = query
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
+    private void CalculateStatistics()
+    {
+        if (allUsers == null) return;
+
+        totalUsers = allUsers.Count;
+        activeUsers = allUsers.Count(u => u.IsActive);
+        supportCount = allUsers.Count(u => u.Role.Name == "Support");
+        adminCount = allUsers.Count(u => u.Role.Name == "Admin");
+    }
+
+    private async Task FilterByRole(string role)
+    {
+        selectedRole = role;
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task OnSearchChanged()
+    {
+        searchTimer?.Dispose();
+        searchTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(() =>
+            {
+                currentPage = 1;
+                ApplyFilters();
+                StateHasChanged();
+            });
+        }, null, 500, System.Threading.Timeout.Infinite);
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        currentPage = 1;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    // Modal operations
+    private void ShowAddUserModal()
+    {
+        editingUser = new UserEditModel { IsActive = true, RoleId = availableRoles?.FirstOrDefault(r => r.Name == "User")?.Id ?? 1 };
+        showUserModal = true;
+        StateHasChanged();
+    }
+
+    private void ShowEditUserModal(User user)
+    {
+        editingUser = new UserEditModel
+        {
+            Id = user.Id,
+            DisplayName = user.DisplayName,
+            Username = user.Username,
+            Email = user.Email,
+            RoleId = user.RoleId,
+            IsActive = user.IsActive
+        };
+        showUserModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseUserModal()
+    {
+        showUserModal = false;
+        editingUser = new UserEditModel();
+        StateHasChanged();
+    }
+
+    private async Task SaveUser()
+    {
+        isProcessing = true;
+        try
+        {
+            if (editingUser.Id == 0)
+            {
+                // Add new user
+                var newUser = new User
+                {
+                    DisplayName = editingUser.DisplayName,
+                    Username = editingUser.Username,
+                    Email = editingUser.Email,
+                    Password = editingUser.Password, // In production, hash this
+                    RoleId = editingUser.RoleId,
+                    IsActive = editingUser.IsActive,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                DbContext.Users.Add(newUser);
+            }
+            else
+            {
+                // Update existing user
+                var user = await DbContext.Users.FindAsync(editingUser.Id);
+                if (user != null)
+                {
+                    user.DisplayName = editingUser.DisplayName;
+                    user.Email = editingUser.Email;
+                    user.RoleId = editingUser.RoleId;
+                    user.IsActive = editingUser.IsActive;
+                }
+            }
+
+            await DbContext.SaveChangesAsync();
+            await LoadUsers();
+            CloseUserModal();
+
+            await JSRuntime.InvokeVoidAsync("showToast", "کاربر با موفقیت ذخیره شد", "success");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"خطا در ذخیره کاربر: {ex.Message}", "error");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleUserStatus(User user)
+    {
+        var action = user.IsActive ? "غیرفعال" : "فعال";
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"آیا از {action} کردن کاربر {user.DisplayName} اطمینان دارید؟"))
+        {
+            isProcessing = true;
+            try
+            {
+                user.IsActive = !user.IsActive;
+                await DbContext.SaveChangesAsync();
+
+                await LoadUsers();
+                await JSRuntime.InvokeVoidAsync("showToast", $"کاربر {action} شد", "success");
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", $"خطا: {ex.Message}", "error");
+            }
+            finally
+            {
+                isProcessing = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ResetUserPassword(User user)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"آیا از بازنشانی رمز عبور کاربر {user.DisplayName} اطمینان دارید؟"))
+        {
+            isProcessing = true;
+            try
+            {
+                var newPassword = "123456"; // In production, generate a secure password
+                user.Password = newPassword; // In production, hash this
+
+                await DbContext.SaveChangesAsync();
+
+                await JSRuntime.InvokeVoidAsync("alert", $"رمز عبور به {newPassword} تغییر یافت");
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", $"خطا: {ex.Message}", "error");
+            }
+            finally
+            {
+                isProcessing = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ShowUserStats(User user)
+    {
+        // Load detailed statistics for support user
+        var resolvedTickets = await DbContext.Tickets
+            .Where(t => t.ClosedByUserId == user.Id)
+            .ToListAsync();
+
+        var activeTickets = await DbContext.Tickets
+            .CountAsync(t => t.AssignedToUserId == user.Id && t.Status == TicketStatus.InProgress);
+
+        var avgResolutionTime = resolvedTickets.Where(t => t.AssignedAt.HasValue && t.ClosedAt.HasValue)
+                                              .Select(t => (t.ClosedAt!.Value - t.AssignedAt!.Value).TotalHours)
+                                              .DefaultIfEmpty(0)
+                                              .Average();
+
+        // Mock weekly performance
+        var weeklyPerformance = new List<DailyPerformance>();
+        var today = DateTime.UtcNow;
+        for (int i = 6; i >= 0; i--)
+        {
+            var date = today.AddDays(-i);
+            var dayResolved = resolvedTickets.Count(t => t.ClosedAt?.Date == date.Date);
+
+            weeklyPerformance.Add(new DailyPerformance
+            {
+                Day = GetPersianDayName(date.DayOfWeek),
+                Resolved = dayResolved
+            });
+        }
+
+        selectedUserStats = new UserDetailedStats
+        {
+            UserName = user.DisplayName,
+            TotalResolved = resolvedTickets.Count,
+            ActiveTickets = activeTickets,
+            AvgResolutionTime = avgResolutionTime,
+            CustomerRating = 4.2 + (new Random().NextDouble() * 0.6), // Mock rating
+            WeeklyPerformance = weeklyPerformance
+        };
+
+        showStatsModal = true;
+        StateHasChanged();
+    }
+
+    // Helper methods
+    private UserTicketStats GetUserTicketStats(int userId)
+    {
+        return userStatsCache.GetValueOrDefault(userId, new UserTicketStats());
+    }
+
+    private double GetSupportPerformance(int userId)
+    {
+        var stats = GetUserTicketStats(userId);
+        if (stats.Resolved == 0) return 0;
+
+        // Simple performance calculation
+        var baseScore = Math.Min(stats.Resolved * 2, 60);
+        var activeBonus = Math.Max(5 - stats.Active, 0) * 5;
+
+        return Math.Min(baseScore + activeBonus, 100);
+    }
+
+    private string GetSupportWorkloadStatus(int userId)
+    {
+        var stats = GetUserTicketStats(userId);
+        return stats.Active switch
+        {
+            0 => "آزاد",
+            <= 2 => "سبک",
+            <= 4 => "متوسط",
+            <= 6 => "سنگین",
+            _ => "بیش از حد"
+        };
+    }
+
+    private bool IsUserOnline(int userId)
+    {
+        // Mock online status - in real app, this would come from SignalR tracking
+        return new Random(userId).Next(0, 3) == 0;
+    }
+
+    private string GetLastActivity(int userId)
+    {
+        // Mock last activity - in real app, this would be tracked
+        var hours = new Random(userId).Next(1, 48);
+        return $"{hours} ساعت پیش";
+    }
+
+    private string GetPersianDayName(DayOfWeek dayOfWeek) => dayOfWeek switch
+    {
+        DayOfWeek.Saturday => "شنبه",
+        DayOfWeek.Sunday => "یکشنبه",
+        DayOfWeek.Monday => "دوشنبه",
+        DayOfWeek.Tuesday => "سه‌شنبه",
+        DayOfWeek.Wednesday => "چهارشنبه",
+        DayOfWeek.Thursday => "پنج‌شنبه",
+        DayOfWeek.Friday => "جمعه",
+        _ => "نامشخص"
+    };
+
+    // Styling helpers
+    private string GetRoleColor(string roleName) => roleName switch
+    {
+        "Admin" => "bg-warning",
+        "Support" => "bg-info",
+        "User" => "bg-primary",
+        _ => "bg-secondary"
+    };
+
+    private string GetRoleBadgeClass(string roleName) => roleName switch
+    {
+        "Admin" => "bg-warning text-dark",
+        "Support" => "bg-info",
+        "User" => "bg-primary",
+        _ => "bg-secondary"
+    };
+
+    private string GetRoleText(string roleName) => roleName switch
+    {
+        "Admin" => "مدیر",
+        "Support" => "پشتیبان",
+        "User" => "کاربر",
+        _ => "نامشخص"
+    };
+
+    private string GetPerformanceColor(double performance) => performance switch
+    {
+        >= 80 => "bg-success",
+        >= 60 => "bg-info",
+        >= 40 => "bg-warning",
+        _ => "bg-danger"
+    };
+
+    public void Dispose()
+    {
+        searchTimer?.Dispose();
+    }
+
+    // Data classes
+    public class UserEditModel
+    {
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "نام نمایشی الزامی است")]
+        [StringLength(200, ErrorMessage = "نام نمایشی نباید بیش از 200 کاراکتر باشد")]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "نام کاربری الزامی است")]
+        [StringLength(100, ErrorMessage = "نام کاربری نباید بیش از 100 کاراکتر باشد")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "ایمیل الزامی است")]
+        [EmailAddress(ErrorMessage = "فرمت ایمیل صحیح نیست")]
+        public string Email { get; set; } = string.Empty;
+
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "رمز عبور باید بین 6 تا 100 کاراکتر باشد")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required]
+        public int RoleId { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class UserTicketStats
+    {
+        public int Created { get; set; }
+        public int Resolved { get; set; }
+        public int Active { get; set; }
+    }
+
+    public class UserDetailedStats
+    {
+        public string UserName { get; set; } = string.Empty;
+        public int TotalResolved { get; set; }
+        public int ActiveTickets { get; set; }
+        public double AvgResolutionTime { get; set; }
+        public double CustomerRating { get; set; }
+        public List<DailyPerformance> WeeklyPerformance { get; set; } = new();
+    }
+
+    public class DailyPerformance
+    {
+        public string Day { get; set; } = string.Empty;
+        public int Resolved { get; set; }
+    }
+}

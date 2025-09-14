@@ -26,7 +26,7 @@ namespace Data.Model
 
         [Required]
         [StringLength(100)]
-        [Index(IsUnique = true)]
+        //[Index(IsUnique = true)]
         public string Username { get; set; } = string.Empty;
 
         [Required]
@@ -35,7 +35,8 @@ namespace Data.Model
 
         [Required]
         [StringLength(255)]
-        [Index(IsUnique = true)]
+        //[Index(IsUnique = true)]
+        //Index نداریم راهی داری بگو نداری حذف کنیم
         public string Email { get; set; } = string.Empty;
 
         [Required]

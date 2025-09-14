@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -11,7 +13,7 @@ namespace Data.Model
         public int Id { get; set; }
 
         [ForeignKey(nameof(User))]
-        [Index(IsUnique = true)]
+        //[Index(IsUnique = true)]
         public int UserId { get; set; }
 
         public int TicketsResolved { get; set; }

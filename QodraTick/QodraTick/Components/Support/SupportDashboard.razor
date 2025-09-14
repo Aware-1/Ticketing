@@ -1,0 +1,374 @@
+﻿@inject ApplicationDbContext DbContext
+@inject IUserService UserService
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="bi bi-inbox-fill text-warning" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">تیکت‌های باز</h5>
+                <h3 class="text-warning">@openTicketsCount</h3>
+                <p class="card-text">نیازمند پاسخ</p>
+                <a href="/support/tickets" class="btn btn-warning">مشاهده همه</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="bi bi-person-check-fill text-info" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">تیکت‌های من</h5>
+                <h3 class="text-info">@myActiveTicketsCount</h3>
+                <p class="card-text">در حال بررسی</p>
+                <a href="/support/my-tickets" class="btn btn-info">مدیریت</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">حل شده امروز</h5>
+                <h3 class="text-success">@todayResolvedCount</h3>
+                <p class="card-text">امروز</p>
+                <a href="/support/archive" class="btn btn-success">آرشیو</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="bi bi-graph-up text-primary" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">مجموع حل شده</h5>
+                <h3 class="text-primary">@myTotalResolvedCount</h3>
+                <p class="card-text">تمام مدت</p>
+                <small class="text-muted">عملکرد شما</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+@if (recentTickets?.Any() == true)
+{
+    <div class="mt-4">
+        <h4>تیکت‌های اخیر شما</h4>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>شماره</th>
+                        <th>موضوع</th>
+                        <th>کاربر</th>
+                        <th>وضعیت</th>
+                        <th>اولویت</th>
+                        <th>آخرین فعالیت</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ticket in recentTickets.Take(10))
+                    {
+                        <tr class="@GetTicketRowClass(ticket.Priority)">
+                            <td>@ticket.Id</td>
+                            <td>
+                                <strong>@ticket.Subject</strong>
+                                @if (HasUnreadMessages(ticket))
+                                {
+                                    <span class="badge bg-danger ms-1">جدید</span>
+                                }
+                            </td>
+                            <td>@ticket.CreatedByUser.DisplayName</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(ticket.Status)">
+                                    @GetStatusText(ticket.Status)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge @GetPriorityBadgeClass(ticket.Priority)">
+                                    @GetPriorityText(ticket.Priority)
+                                </span>
+                            </td>
+                            <td>
+                                @ticket.LastActivityAt.ToString("MM/dd HH:mm")
+                                @if ((DateTime.UtcNow - ticket.LastActivityAt).TotalHours > 4)
+                                {
+                                    <small class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                    </small>
+                                }
+                            </td>
+                            <td>
+                                <a href="/tickets/@ticket.Id" class="btn btn-sm btn-outline-primary">
+                                    @if (ticket.Status == TicketStatus.Open)
+                                    {
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        <span>پذیرش</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-chat me-1"></i>
+                                        <span>چت</span>
+                                    }
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<!-- Priority Distribution Chart -->
+@if (priorityStats?.Any() == true)
+{
+    <div class="mt-4">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>توزیع اولویت تیکت‌های فعال</h6>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var stat in priorityStats)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>@stat.PriorityName</span>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress me-2" style="width: 100px;">
+                                        <div class="progress-bar @stat.ProgressClass"
+                                             style="width: @(totalActiveTickets > 0 ? (stat.Count * 100.0 / totalActiveTickets).ToString("F1") : "0")%">
+                                        </div>
+                                    </div>
+                                    <strong>@stat.Count</strong>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>عملکرد هفتگی</h6>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var day in weeklyStats)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>@day.DayName</span>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress me-2" style="width: 100px;">
+                                        <div class="progress-bar bg-success"
+                                             style="width: @(maxDailyResolved > 0 ? (day.ResolvedCount * 100.0 / maxDailyResolved).ToString("F1") : "0")%">
+                                        </div>
+                                    </div>
+                                    <strong>@day.ResolvedCount</strong>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Real-time Notifications Area -->
+<div id="connection-status" class="alert alert-info mt-3" style="display: none;">
+    اتصال: در حال اتصال...
+</div>
+
+@code {
+    private int openTicketsCount = 0;
+    private int myActiveTicketsCount = 0;
+    private int myTotalResolvedCount = 0;
+    private int todayResolvedCount = 0;
+    private int totalActiveTickets = 0;
+    private int maxDailyResolved = 1;
+    private List<Ticket>? recentTickets;
+    private List<PriorityStatistic>? priorityStats;
+    private List<DailyStatistic>? weeklyStats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await UserService.GetCurrentUserAsync();
+        if (currentUser?.Role.Name != "Support") return;
+
+        await LoadStatistics(currentUser.Id);
+        await LoadRecentTickets(currentUser.Id);
+        await LoadPriorityStats();
+        await LoadWeeklyStats(currentUser.Id);
+    }
+
+    private async Task LoadStatistics(int supportUserId)
+    {
+        openTicketsCount = await DbContext.Tickets
+            .CountAsync(t => t.Status == TicketStatus.Open);
+
+        myActiveTicketsCount = await DbContext.Tickets
+            .CountAsync(t => t.AssignedToUserId == supportUserId && t.Status == TicketStatus.InProgress);
+
+        var stats = await DbContext.TicketStatistics
+            .FirstOrDefaultAsync(s => s.UserId == supportUserId);
+        myTotalResolvedCount = stats?.TicketsResolved ?? 0;
+
+        var today = DateTime.UtcNow.Date;
+        todayResolvedCount = await DbContext.Tickets
+            .CountAsync(t => t.ClosedByUserId == supportUserId &&
+                           t.ClosedAt.HasValue &&
+                           t.ClosedAt.Value.Date == today);
+    }
+
+    private async Task LoadRecentTickets(int supportUserId)
+    {
+        recentTickets = await DbContext.Tickets
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.Messages)
+            .Where(t => t.AssignedToUserId == supportUserId || t.Status == TicketStatus.Open)
+            .OrderByDescending(t => t.Priority)
+            .ThenByDescending(t => t.LastActivityAt)
+            .ToListAsync();
+    }
+
+    private async Task LoadPriorityStats()
+    {
+        var activeTickets = await DbContext.Tickets
+            .Where(t => t.Status == TicketStatus.Open || t.Status == TicketStatus.InProgress)
+            .GroupBy(t => t.Priority)
+            .Select(g => new { Priority = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        totalActiveTickets = activeTickets.Sum(x => x.Count);
+
+        priorityStats = activeTickets.Select(x => new PriorityStatistic
+        {
+            Priority = x.Priority,
+            Count = x.Count,
+            PriorityName = GetPriorityText(x.Priority),
+            ProgressClass = GetPriorityProgressClass(x.Priority)
+        }).ToList();
+    }
+
+    private async Task LoadWeeklyStats(int supportUserId)
+    {
+        var weekAgo = DateTime.UtcNow.AddDays(-7);
+        var dailyStats = await DbContext.Tickets
+            .Where(t => t.ClosedByUserId == supportUserId &&
+                       t.ClosedAt.HasValue &&
+                       t.ClosedAt.Value >= weekAgo)
+            .GroupBy(t => t.ClosedAt!.Value.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        weeklyStats = new List<DailyStatistic>();
+        for (int i = 6; i >= 0; i--)
+        {
+            var date = DateTime.UtcNow.AddDays(-i).Date;
+            var count = dailyStats.FirstOrDefault(x => x.Date == date)?.Count ?? 0;
+
+            weeklyStats.Add(new DailyStatistic
+            {
+                Date = date,
+                ResolvedCount = count,
+                DayName = GetPersianDayName(date.DayOfWeek)
+            });
+        }
+
+        maxDailyResolved = Math.Max(1, weeklyStats.Max(x => x.ResolvedCount));
+    }
+
+    private bool HasUnreadMessages(Ticket ticket)
+    {
+        if (ticket.Messages?.Any() != true) return false;
+
+        var lastMessage = ticket.Messages.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
+        return lastMessage != null &&
+               !lastMessage.IsFromSupport &&
+               (DateTime.UtcNow - lastMessage.CreatedAt).TotalMinutes < 60;
+    }
+
+    private string GetTicketRowClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Critical => "table-danger",
+        TicketPriority.High => "table-warning",
+        _ => ""
+    };
+
+    private string GetStatusBadgeClass(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "bg-warning text-dark",
+        TicketStatus.InProgress => "bg-info",
+        TicketStatus.Closed => "bg-success",
+        TicketStatus.Rejected => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetStatusText(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "باز",
+        TicketStatus.InProgress => "در حال بررسی",
+        TicketStatus.Closed => "بسته شده",
+        TicketStatus.Rejected => "رد شده",
+        _ => "نامشخص"
+    };
+
+    private string GetPriorityBadgeClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "bg-success",
+        TicketPriority.Normal => "bg-primary",
+        TicketPriority.High => "bg-warning text-dark",
+        TicketPriority.Critical => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetPriorityText(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "کم",
+        TicketPriority.Normal => "عادی",
+        TicketPriority.High => "بالا",
+        TicketPriority.Critical => "اورژانس",
+        _ => "نامشخص"
+    };
+
+    private string GetPriorityProgressClass(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => "bg-success",
+        TicketPriority.Normal => "bg-primary",
+        TicketPriority.High => "bg-warning",
+        TicketPriority.Critical => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetPersianDayName(DayOfWeek dayOfWeek) => dayOfWeek switch
+    {
+        DayOfWeek.Saturday => "شنبه",
+        DayOfWeek.Sunday => "یکشنبه",
+        DayOfWeek.Monday => "دوشنبه",
+        DayOfWeek.Tuesday => "سه‌شنبه",
+        DayOfWeek.Wednesday => "چهارشنبه",
+        DayOfWeek.Thursday => "پنج‌شنبه",
+        DayOfWeek.Friday => "جمعه",
+        _ => "نامشخص"
+    };
+
+    public class PriorityStatistic
+    {
+        public TicketPriority Priority { get; set; }
+        public int Count { get; set; }
+        public string PriorityName { get; set; } = string.Empty;
+        public string ProgressClass { get; set; } = string.Empty;
+    }
+
+    public class DailyStatistic
+    {
+        public DateTime Date { get; set; }
+        public int ResolvedCount { get; set; }
+        public string DayName { get; set; } = string.Empty;
+    }
+}
