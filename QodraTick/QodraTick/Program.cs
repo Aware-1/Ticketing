@@ -46,6 +46,7 @@ builder.Services.AddAuthorization(options =>
 // Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>(); 
 
 // SignalR
 builder.Services.AddSignalR(options =>

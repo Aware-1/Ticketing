@@ -1,10 +1,8 @@
 ﻿@page "/login"
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Authentication.Cookies
-@using System.Security.Claims
 @using System.ComponentModel.DataAnnotations
 @rendermode InteractiveServer
 @inject IUserService UserService
+@inject IAuthenticationService AuthService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
@@ -29,19 +27,21 @@
 
                     <div class="mb-3">
                         <label class="form-label">نام کاربری</label>
-                        <InputText @bind-Value="loginModel.Username" class="form-control" placeholder="admin" />
+                        <InputText @bind-Value="loginModel.Username" class="form-control" placeholder="admin1" />
                         <ValidationMessage For="@(() => loginModel.Username)" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">رمز عبور</label>
-                        <InputText type="password" @bind-Value="loginModel.Password" class="form-control" placeholder="admin123" />
+                        <InputText @bind-Value="loginModel.Password" type="password" class="form-control" placeholder="admin123" />
                         <ValidationMessage For="@(() => loginModel.Password)" />
                     </div>
 
                     <div class="mb-3 form-check">
-                        <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" />
-                        <label class="form-check-label">مرا به خاطر بسپار</label>
+                        <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" id="rememberMe" />
+                        <label class="form-check-label" for="rememberMe">
+                            مرا به خاطر بسپار
+                        </label>
                     </div>
 
                     <div class="d-grid">
@@ -53,19 +53,33 @@
                             }
                             else
                             {
+                                <i class="bi bi-box-arrow-in-right me-2"></i>
                                 <span>ورود</span>
                             }
                         </button>
                     </div>
                 </EditForm>
 
-                <div class="mt-3">
-                    <small class="text-muted">
-                        <strong>کاربران پیش‌فرض:</strong><br>
-                        admin / admin123 (مدیر)<br>
-                        support / support123 (پشتیبان)<br>
-                        user / user123 (کاربر عادی)
-                    </small>
+                <hr class="my-4">
+
+                <div class="text-center">
+                    <h6 class="text-muted">حساب‌های تستی:</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted d-block"><strong>مدیر:</strong></small>
+                            <small class="text-muted">admin1 / admin123</small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block"><strong>پشتیبان:</strong></small>
+                            <small class="text-muted">support1 / support123</small>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <small class="text-muted d-block"><strong>کاربر:</strong></small>
+                            <small class="text-muted">user1 / user123</small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -95,37 +109,27 @@
 
         try
         {
+            // Validate user credentials
             var user = await UserService.LoginAsync(loginModel.Username, loginModel.Password);
 
             if (user != null)
             {
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim("DisplayName", user.DisplayName),
-                    new Claim(ClaimTypes.Role, user.Role.Name),
-                    new Claim("UserId", user.Id.ToString())
-                };
-
-                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-
-                var authProperties = new AuthenticationProperties
-                {
-                    IsPersistent = loginModel.RememberMe,
-                    ExpiresUtc = loginModel.RememberMe ? DateTimeOffset.UtcNow.AddDays(7) : DateTimeOffset.UtcNow.AddHours(1)
-                };
-
+                // Clear client storage
                 await JSRuntime.InvokeVoidAsync("localStorage.clear");
                 await Task.Delay(100);
 
-                // ایجاد HttpContext و Authentication
-                var httpContext = new DefaultHttpContext();
-                await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal, authProperties);
+                // Sign in using AuthenticationService
+                var success = await AuthService.SignInAsync(user, loginModel.RememberMe);
 
-                Navigation.NavigateTo("/", true);
+                if (success)
+                {
+                    // Redirect to home page with force refresh
+                    Navigation.NavigateTo("/", true);
+                }
+                else
+                {
+                    errorMessage = "خطا در ورود به سیستم. لطفاً دوباره تلاش کنید.";
+                }
             }
             else
             {

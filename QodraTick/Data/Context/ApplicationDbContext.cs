@@ -19,35 +19,35 @@ namespace Data.Context
         {
             base.OnModelCreating(modelBuilder);
 
-            // تنظیم Foreign Key Relationships و Cascade Behaviors
+            // تنظیم Foreign Key Relationships - همه NoAction برای جلوگیری از Multiple Cascade Paths
 
-            // User -> Role relationship (Restrict)
+            // User -> Role relationship (NoAction)
             modelBuilder.Entity<User>()
                 .HasOne(u => u.Role)
                 .WithMany(r => r.Users)
                 .HasForeignKey(u => u.RoleId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
 
-            // Ticket -> CreatedByUser (Restrict)
+            // Ticket -> CreatedByUser (NoAction)
             modelBuilder.Entity<Ticket>()
                 .HasOne(t => t.CreatedByUser)
                 .WithMany(u => u.CreatedTickets)
                 .HasForeignKey(t => t.CreatedByUserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
 
-            // Ticket -> AssignedToUser (SetNull)
+            // Ticket -> AssignedToUser (NoAction)
             modelBuilder.Entity<Ticket>()
                 .HasOne(t => t.AssignedToUser)
                 .WithMany(u => u.AssignedTickets)
                 .HasForeignKey(t => t.AssignedToUserId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
 
-            // Ticket -> ClosedByUser (SetNull)
+            // Ticket -> ClosedByUser (NoAction)
             modelBuilder.Entity<Ticket>()
                 .HasOne(t => t.ClosedByUser)
                 .WithMany()
                 .HasForeignKey(t => t.ClosedByUserId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
 
             // Message -> Ticket (Cascade)
             modelBuilder.Entity<Message>()
@@ -56,12 +56,12 @@ namespace Data.Context
                 .HasForeignKey(m => m.TicketId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Message -> User (Restrict)
+            // Message -> User (NoAction)
             modelBuilder.Entity<Message>()
                 .HasOne(m => m.User)
                 .WithMany(u => u.Messages)
                 .HasForeignKey(m => m.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
 
             // Attachment -> Ticket (Cascade)
             modelBuilder.Entity<Attachment>()
@@ -70,19 +70,19 @@ namespace Data.Context
                 .HasForeignKey(a => a.TicketId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Attachment -> UploadedByUser (Restrict)
+            // Attachment -> UploadedByUser (NoAction)
             modelBuilder.Entity<Attachment>()
                 .HasOne(a => a.UploadedByUser)
                 .WithMany()
                 .HasForeignKey(a => a.UploadedByUserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
 
-            // TicketStatistic -> User (Restrict)
+            // TicketStatistic -> User (NoAction)
             modelBuilder.Entity<TicketStatistic>()
                 .HasOne(ts => ts.User)
                 .WithMany()
                 .HasForeignKey(ts => ts.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
 
             // تاریخ ثابت برای Seeding (بدون Dynamic values)
             var seedDate = new DateTime(2024, 1, 15, 10, 0, 0, DateTimeKind.Utc);
