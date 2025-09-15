@@ -50,7 +50,7 @@ namespace Data.Migrations
                         column: x => x.RoleId,
                         principalTable: "Roles",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -92,7 +92,7 @@ namespace Data.Migrations
                         column: x => x.CreatedByUserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -113,7 +113,7 @@ namespace Data.Migrations
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -208,7 +208,7 @@ namespace Data.Migrations
                 {
                     { 1, null, null, 1, null, null, new DateTime(2024, 1, 16, 10, 0, 0, 0, DateTimeKind.Utc), 7, "<p>نمی‌توانم نرم‌افزار جدید را نصب کنم. لطفاً کمک کنید.</p>", new DateTime(2024, 1, 16, 10, 0, 0, 0, DateTimeKind.Utc), 1, 0, "مشکل نصب نرم‌افزار" },
                     { 2, new DateTime(2024, 1, 16, 13, 0, 0, 0, DateTimeKind.Utc), 3, 0, null, null, new DateTime(2024, 1, 16, 12, 0, 0, 0, DateTimeKind.Utc), 8, "<p>پرینتر طبقه سوم کار نمی‌کند.</p>", new DateTime(2024, 1, 16, 14, 0, 0, 0, DateTimeKind.Utc), 2, 1, "خرابی پرینتر" },
-                    { 3, null, null, 1, null, null, new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc), 7, "<p>نیاز به بروزرسانی سیستم عامل داریم.</p>", new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc), 0, 0, "بروزرسانی سیستم عامل" }
+                    { 3, null, null, 1, null, null, new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc), 7, "<p>نیاز به بروزرسانی سیستم عامل ویندوز داریم.</p>", new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc), 0, 0, "درخواست بروزرسانی سیستم عامل" }
                 });
 
             migrationBuilder.CreateIndex(

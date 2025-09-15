@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250915052524_init")]
+    [Migration("20250915054727_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -241,11 +241,11 @@ namespace Data.Migrations
                             Category = 1,
                             CreatedAt = new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc),
                             CreatedByUserId = 7,
-                            Description = "<p>نیاز به بروزرسانی سیستم عامل داریم.</p>",
+                            Description = "<p>نیاز به بروزرسانی سیستم عامل ویندوز داریم.</p>",
                             LastActivityAt = new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc),
                             Priority = 0,
                             Status = 0,
-                            Subject = "بروزرسانی سیستم عامل"
+                            Subject = "درخواست بروزرسانی سیستم عامل"
                         });
                 });
 
@@ -460,7 +460,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Model.User", "CreatedByUser")
                         .WithMany("CreatedTickets")
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("AssignedToUser");
@@ -475,7 +475,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Model.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -486,7 +486,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Model.Role", "Role")
                         .WithMany("Users")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Role");
