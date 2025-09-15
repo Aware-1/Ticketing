@@ -79,12 +79,14 @@ namespace Data.Migrations
                         name: "FK_Tickets_Users_AssignedToUserId",
                         column: x => x.AssignedToUserId,
                         principalTable: "Users",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Tickets_Users_ClosedByUserId",
                         column: x => x.ClosedByUserId,
                         principalTable: "Users",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Tickets_Users_CreatedByUserId",
                         column: x => x.CreatedByUserId,
@@ -142,7 +144,7 @@ namespace Data.Migrations
                         column: x => x.UploadedByUserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -171,7 +173,7 @@ namespace Data.Migrations
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.InsertData(
@@ -179,9 +181,9 @@ namespace Data.Migrations
                 columns: new[] { "Id", "CreatedAt", "Description", "Name" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2025, 9, 15, 4, 52, 58, 937, DateTimeKind.Utc).AddTicks(2430), "کاربر عادی", "User" },
-                    { 2, new DateTime(2025, 9, 15, 4, 52, 58, 937, DateTimeKind.Utc).AddTicks(2664), "پشتیبان", "Support" },
-                    { 3, new DateTime(2025, 9, 15, 4, 52, 58, 937, DateTimeKind.Utc).AddTicks(2666), "مدیر", "Admin" }
+                    { 1, new DateTime(2024, 1, 15, 10, 0, 0, 0, DateTimeKind.Utc), "کاربر عادی", "User" },
+                    { 2, new DateTime(2024, 1, 15, 10, 0, 0, 0, DateTimeKind.Utc), "پشتیبان", "Support" },
+                    { 3, new DateTime(2024, 1, 15, 10, 0, 0, 0, DateTimeKind.Utc), "مدیر", "Admin" }
                 });
 
             migrationBuilder.InsertData(
@@ -189,11 +191,14 @@ namespace Data.Migrations
                 columns: new[] { "Id", "CreatedAt", "DisplayName", "Email", "IsActive", "Password", "RoleId", "Username" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2025, 9, 15, 4, 52, 58, 937, DateTimeKind.Utc).AddTicks(9738), "مدیر سیستم", "admin@company.com", true, "admin123", 3, "admin" },
-                    { 2, new DateTime(2025, 9, 15, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(174), "پشتیبان اول", "support1@company.com", true, "support123", 2, "support1" },
-                    { 3, new DateTime(2025, 9, 15, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(176), "پشتیبان دوم", "support2@company.com", true, "support123", 2, "support2" },
-                    { 4, new DateTime(2025, 9, 15, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(178), "کاربر تست اول", "user1@company.com", true, "user123", 1, "user1" },
-                    { 5, new DateTime(2025, 9, 15, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(180), "کاربر تست دوم", "user2@company.com", true, "user123", 1, "user2" }
+                    { 1, new DateTime(2024, 1, 15, 10, 0, 0, 0, DateTimeKind.Utc), "مدیر اول", "admin1@company.com", true, "admin123", 3, "admin1" },
+                    { 2, new DateTime(2024, 1, 15, 10, 5, 0, 0, DateTimeKind.Utc), "مدیر دوم", "admin2@company.com", true, "admin123", 3, "admin2" },
+                    { 3, new DateTime(2024, 1, 15, 10, 10, 0, 0, DateTimeKind.Utc), "پشتیبان اول", "support1@company.com", true, "support123", 2, "support1" },
+                    { 4, new DateTime(2024, 1, 15, 10, 15, 0, 0, DateTimeKind.Utc), "پشتیبان دوم", "support2@company.com", true, "support123", 2, "support2" },
+                    { 5, new DateTime(2024, 1, 15, 10, 20, 0, 0, DateTimeKind.Utc), "پشتیبان سوم", "support3@company.com", true, "support123", 2, "support3" },
+                    { 6, new DateTime(2024, 1, 15, 10, 25, 0, 0, DateTimeKind.Utc), "پشتیبان چهارم", "support4@company.com", true, "support123", 2, "support4" },
+                    { 7, new DateTime(2024, 1, 15, 10, 30, 0, 0, DateTimeKind.Utc), "کاربر تست اول", "user1@company.com", true, "user123", 1, "user1" },
+                    { 8, new DateTime(2024, 1, 15, 10, 35, 0, 0, DateTimeKind.Utc), "کاربر تست دوم", "user2@company.com", true, "user123", 1, "user2" }
                 });
 
             migrationBuilder.InsertData(
@@ -201,8 +206,9 @@ namespace Data.Migrations
                 columns: new[] { "Id", "AssignedAt", "AssignedToUserId", "Category", "ClosedAt", "ClosedByUserId", "CreatedAt", "CreatedByUserId", "Description", "LastActivityAt", "Priority", "Status", "Subject" },
                 values: new object[,]
                 {
-                    { 1, null, null, 1, null, null, new DateTime(2025, 9, 13, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(2718), 4, "<p>نمی‌توانم نرم‌افزار جدید را نصب کنم. لطفاً کمک کنید.</p>", new DateTime(2025, 9, 13, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(3016), 1, 0, "مشکل نصب نرم‌افزار" },
-                    { 2, new DateTime(2025, 9, 15, 2, 52, 58, 938, DateTimeKind.Utc).AddTicks(3405), 2, 0, null, null, new DateTime(2025, 9, 14, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(3404), 5, "<p>پرینتر طبقه سوم کار نمی‌کند.</p>", new DateTime(2025, 9, 15, 3, 52, 58, 938, DateTimeKind.Utc).AddTicks(3751), 2, 1, "خرابی پرینتر" }
+                    { 1, null, null, 1, null, null, new DateTime(2024, 1, 16, 10, 0, 0, 0, DateTimeKind.Utc), 7, "<p>نمی‌توانم نرم‌افزار جدید را نصب کنم. لطفاً کمک کنید.</p>", new DateTime(2024, 1, 16, 10, 0, 0, 0, DateTimeKind.Utc), 1, 0, "مشکل نصب نرم‌افزار" },
+                    { 2, new DateTime(2024, 1, 16, 13, 0, 0, 0, DateTimeKind.Utc), 3, 0, null, null, new DateTime(2024, 1, 16, 12, 0, 0, 0, DateTimeKind.Utc), 8, "<p>پرینتر طبقه سوم کار نمی‌کند.</p>", new DateTime(2024, 1, 16, 14, 0, 0, 0, DateTimeKind.Utc), 2, 1, "خرابی پرینتر" },
+                    { 3, null, null, 1, null, null, new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc), 7, "<p>نیاز به بروزرسانی سیستم عامل داریم.</p>", new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc), 0, 0, "بروزرسانی سیستم عامل" }
                 });
 
             migrationBuilder.CreateIndex(

@@ -19,68 +19,172 @@ namespace Data.Context
         {
             base.OnModelCreating(modelBuilder);
 
+            // تنظیم Foreign Key Relationships و Cascade Behaviors
+
+            // User -> Role relationship (Restrict)
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Role)
+                .WithMany(r => r.Users)
+                .HasForeignKey(u => u.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Ticket -> CreatedByUser (Restrict)
+            modelBuilder.Entity<Ticket>()
+                .HasOne(t => t.CreatedByUser)
+                .WithMany(u => u.CreatedTickets)
+                .HasForeignKey(t => t.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Ticket -> AssignedToUser (SetNull)
+            modelBuilder.Entity<Ticket>()
+                .HasOne(t => t.AssignedToUser)
+                .WithMany(u => u.AssignedTickets)
+                .HasForeignKey(t => t.AssignedToUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Ticket -> ClosedByUser (SetNull)
+            modelBuilder.Entity<Ticket>()
+                .HasOne(t => t.ClosedByUser)
+                .WithMany()
+                .HasForeignKey(t => t.ClosedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Message -> Ticket (Cascade)
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.Ticket)
+                .WithMany(t => t.Messages)
+                .HasForeignKey(m => m.TicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Message -> User (Restrict)
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.User)
+                .WithMany(u => u.Messages)
+                .HasForeignKey(m => m.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Attachment -> Ticket (Cascade)
+            modelBuilder.Entity<Attachment>()
+                .HasOne(a => a.Ticket)
+                .WithMany(t => t.Attachments)
+                .HasForeignKey(a => a.TicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Attachment -> UploadedByUser (Restrict)
+            modelBuilder.Entity<Attachment>()
+                .HasOne(a => a.UploadedByUser)
+                .WithMany()
+                .HasForeignKey(a => a.UploadedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // TicketStatistic -> User (Restrict)
+            modelBuilder.Entity<TicketStatistic>()
+                .HasOne(ts => ts.User)
+                .WithMany()
+                .HasForeignKey(ts => ts.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // تاریخ ثابت برای Seeding (بدون Dynamic values)
+            var seedDate = new DateTime(2024, 1, 15, 10, 0, 0, DateTimeKind.Utc);
+
             // Seed Roles
             modelBuilder.Entity<Role>().HasData(
-                new Role { Id = 1, Name = "User", Description = "کاربر عادی", CreatedAt = DateTime.UtcNow },
-                new Role { Id = 2, Name = "Support", Description = "پشتیبان", CreatedAt = DateTime.UtcNow },
-                new Role { Id = 3, Name = "Admin", Description = "مدیر", CreatedAt = DateTime.UtcNow }
+                new Role { Id = 1, Name = "User", Description = "کاربر عادی", CreatedAt = seedDate },
+                new Role { Id = 2, Name = "Support", Description = "پشتیبان", CreatedAt = seedDate },
+                new Role { Id = 3, Name = "Admin", Description = "مدیر", CreatedAt = seedDate }
             );
 
-            // Seed Users (بدون رمزنگاری فعلاً)
+            // Seed Users
             modelBuilder.Entity<User>().HasData(
+                // Admins
                 new User
                 {
                     Id = 1,
-                    Username = "admin",
-                    DisplayName = "مدیر سیستم",
-                    Email = "admin@company.com",
-                    Password = "admin123", // Plain text فعلاً
-                    RoleId = 3, // Admin
-                    CreatedAt = DateTime.UtcNow,
+                    Username = "admin1",
+                    DisplayName = "مدیر اول",
+                    Email = "admin1@company.com",
+                    Password = "admin123",
+                    RoleId = 3,
+                    CreatedAt = seedDate,
                     IsActive = true
                 },
                 new User
                 {
                     Id = 2,
+                    Username = "admin2",
+                    DisplayName = "مدیر دوم",
+                    Email = "admin2@company.com",
+                    Password = "admin123",
+                    RoleId = 3,
+                    CreatedAt = seedDate.AddMinutes(5),
+                    IsActive = true
+                },
+                // Support Team
+                new User
+                {
+                    Id = 3,
                     Username = "support1",
                     DisplayName = "پشتیبان اول",
                     Email = "support1@company.com",
                     Password = "support123",
-                    RoleId = 2, // Support
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                },
-                new User
-                {
-                    Id = 3,
-                    Username = "support2",
-                    DisplayName = "پشتیبان دوم",
-                    Email = "support2@company.com",
-                    Password = "support123",
-                    RoleId = 2, // Support
-                    CreatedAt = DateTime.UtcNow,
+                    RoleId = 2,
+                    CreatedAt = seedDate.AddMinutes(10),
                     IsActive = true
                 },
                 new User
                 {
                     Id = 4,
-                    Username = "user1",
-                    DisplayName = "کاربر تست اول",
-                    Email = "user1@company.com",
-                    Password = "user123",
-                    RoleId = 1, // User
-                    CreatedAt = DateTime.UtcNow,
+                    Username = "support2",
+                    DisplayName = "پشتیبان دوم",
+                    Email = "support2@company.com",
+                    Password = "support123",
+                    RoleId = 2,
+                    CreatedAt = seedDate.AddMinutes(15),
                     IsActive = true
                 },
                 new User
                 {
                     Id = 5,
+                    Username = "support3",
+                    DisplayName = "پشتیبان سوم",
+                    Email = "support3@company.com",
+                    Password = "support123",
+                    RoleId = 2,
+                    CreatedAt = seedDate.AddMinutes(20),
+                    IsActive = true
+                },
+                new User
+                {
+                    Id = 6,
+                    Username = "support4",
+                    DisplayName = "پشتیبان چهارم",
+                    Email = "support4@company.com",
+                    Password = "support123",
+                    RoleId = 2,
+                    CreatedAt = seedDate.AddMinutes(25),
+                    IsActive = true
+                },
+                // Regular Users
+                new User
+                {
+                    Id = 7,
+                    Username = "user1",
+                    DisplayName = "کاربر تست اول",
+                    Email = "user1@company.com",
+                    Password = "user123",
+                    RoleId = 1,
+                    CreatedAt = seedDate.AddMinutes(30),
+                    IsActive = true
+                },
+                new User
+                {
+                    Id = 8,
                     Username = "user2",
                     DisplayName = "کاربر تست دوم",
                     Email = "user2@company.com",
                     Password = "user123",
-                    RoleId = 1, // User
-                    CreatedAt = DateTime.UtcNow,
+                    RoleId = 1,
+                    CreatedAt = seedDate.AddMinutes(35),
                     IsActive = true
                 }
             );
@@ -95,9 +199,9 @@ namespace Data.Context
                     Priority = TicketPriority.Normal,
                     Category = TicketCategory.Software,
                     Status = TicketStatus.Open,
-                    CreatedByUserId = 4, // user1
-                    CreatedAt = DateTime.UtcNow.AddDays(-2),
-                    LastActivityAt = DateTime.UtcNow.AddDays(-2)
+                    CreatedByUserId = 7, // user1
+                    CreatedAt = seedDate.AddDays(1),
+                    LastActivityAt = seedDate.AddDays(1)
                 },
                 new Ticket
                 {
@@ -107,11 +211,23 @@ namespace Data.Context
                     Priority = TicketPriority.High,
                     Category = TicketCategory.Hardware,
                     Status = TicketStatus.InProgress,
-                    CreatedByUserId = 5, // user2
-                    AssignedToUserId = 2, // support1
-                    CreatedAt = DateTime.UtcNow.AddDays(-1),
-                    AssignedAt = DateTime.UtcNow.AddHours(-2),
-                    LastActivityAt = DateTime.UtcNow.AddHours(-1)
+                    CreatedByUserId = 8, // user2
+                    AssignedToUserId = 3, // support1
+                    CreatedAt = seedDate.AddDays(1).AddHours(2),
+                    AssignedAt = seedDate.AddDays(1).AddHours(3),
+                    LastActivityAt = seedDate.AddDays(1).AddHours(4)
+                },
+                new Ticket
+                {
+                    Id = 3,
+                    Subject = "درخواست بروزرسانی سیستم عامل",
+                    Description = "<p>نیاز به بروزرسانی سیستم عامل ویندوز داریم.</p>",
+                    Priority = TicketPriority.Low,
+                    Category = TicketCategory.Software,
+                    Status = TicketStatus.Open,
+                    CreatedByUserId = 7, // user1
+                    CreatedAt = seedDate.AddDays(1).AddHours(6),
+                    LastActivityAt = seedDate.AddDays(1).AddHours(6)
                 }
             );
         }

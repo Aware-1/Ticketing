@@ -18,7 +18,7 @@ namespace Data.Model
 
         public int TicketsResolved { get; set; }
 
-        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+        public DateTime LastUpdated { get; set; } 
 
         // Navigation Properties
         public virtual User User { get; set; } = null!;

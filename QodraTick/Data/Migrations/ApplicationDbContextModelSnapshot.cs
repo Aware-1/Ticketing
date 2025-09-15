@@ -128,21 +128,21 @@ namespace Data.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 9, 15, 4, 52, 58, 937, DateTimeKind.Utc).AddTicks(2430),
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 0, 0, 0, DateTimeKind.Utc),
                             Description = "کاربر عادی",
                             Name = "User"
                         },
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 9, 15, 4, 52, 58, 937, DateTimeKind.Utc).AddTicks(2664),
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 0, 0, 0, DateTimeKind.Utc),
                             Description = "پشتیبان",
                             Name = "Support"
                         },
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2025, 9, 15, 4, 52, 58, 937, DateTimeKind.Utc).AddTicks(2666),
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 0, 0, 0, DateTimeKind.Utc),
                             Description = "مدیر",
                             Name = "Admin"
                         });
@@ -210,10 +210,10 @@ namespace Data.Migrations
                         {
                             Id = 1,
                             Category = 1,
-                            CreatedAt = new DateTime(2025, 9, 13, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(2718),
-                            CreatedByUserId = 4,
+                            CreatedAt = new DateTime(2024, 1, 16, 10, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedByUserId = 7,
                             Description = "<p>نمی‌توانم نرم‌افزار جدید را نصب کنم. لطفاً کمک کنید.</p>",
-                            LastActivityAt = new DateTime(2025, 9, 13, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(3016),
+                            LastActivityAt = new DateTime(2024, 1, 16, 10, 0, 0, 0, DateTimeKind.Utc),
                             Priority = 1,
                             Status = 0,
                             Subject = "مشکل نصب نرم‌افزار"
@@ -221,16 +221,28 @@ namespace Data.Migrations
                         new
                         {
                             Id = 2,
-                            AssignedAt = new DateTime(2025, 9, 15, 2, 52, 58, 938, DateTimeKind.Utc).AddTicks(3405),
-                            AssignedToUserId = 2,
+                            AssignedAt = new DateTime(2024, 1, 16, 13, 0, 0, 0, DateTimeKind.Utc),
+                            AssignedToUserId = 3,
                             Category = 0,
-                            CreatedAt = new DateTime(2025, 9, 14, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(3404),
-                            CreatedByUserId = 5,
+                            CreatedAt = new DateTime(2024, 1, 16, 12, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedByUserId = 8,
                             Description = "<p>پرینتر طبقه سوم کار نمی‌کند.</p>",
-                            LastActivityAt = new DateTime(2025, 9, 15, 3, 52, 58, 938, DateTimeKind.Utc).AddTicks(3751),
+                            LastActivityAt = new DateTime(2024, 1, 16, 14, 0, 0, 0, DateTimeKind.Utc),
                             Priority = 2,
                             Status = 1,
                             Subject = "خرابی پرینتر"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Category = 1,
+                            CreatedAt = new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedByUserId = 7,
+                            Description = "<p>نیاز به بروزرسانی سیستم عامل داریم.</p>",
+                            LastActivityAt = new DateTime(2024, 1, 16, 16, 0, 0, 0, DateTimeKind.Utc),
+                            Priority = 0,
+                            Status = 0,
+                            Subject = "بروزرسانی سیستم عامل"
                         });
                 });
 
@@ -305,18 +317,29 @@ namespace Data.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 9, 15, 4, 52, 58, 937, DateTimeKind.Utc).AddTicks(9738),
-                            DisplayName = "مدیر سیستم",
-                            Email = "admin@company.com",
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "مدیر اول",
+                            Email = "admin1@company.com",
                             IsActive = true,
                             Password = "admin123",
                             RoleId = 3,
-                            Username = "admin"
+                            Username = "admin1"
                         },
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 9, 15, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(174),
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 5, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "مدیر دوم",
+                            Email = "admin2@company.com",
+                            IsActive = true,
+                            Password = "admin123",
+                            RoleId = 3,
+                            Username = "admin2"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 10, 0, 0, DateTimeKind.Utc),
                             DisplayName = "پشتیبان اول",
                             Email = "support1@company.com",
                             IsActive = true,
@@ -326,8 +349,8 @@ namespace Data.Migrations
                         },
                         new
                         {
-                            Id = 3,
-                            CreatedAt = new DateTime(2025, 9, 15, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(176),
+                            Id = 4,
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 15, 0, 0, DateTimeKind.Utc),
                             DisplayName = "پشتیبان دوم",
                             Email = "support2@company.com",
                             IsActive = true,
@@ -337,8 +360,30 @@ namespace Data.Migrations
                         },
                         new
                         {
-                            Id = 4,
-                            CreatedAt = new DateTime(2025, 9, 15, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(178),
+                            Id = 5,
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 20, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "پشتیبان سوم",
+                            Email = "support3@company.com",
+                            IsActive = true,
+                            Password = "support123",
+                            RoleId = 2,
+                            Username = "support3"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 25, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "پشتیبان چهارم",
+                            Email = "support4@company.com",
+                            IsActive = true,
+                            Password = "support123",
+                            RoleId = 2,
+                            Username = "support4"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 30, 0, 0, DateTimeKind.Utc),
                             DisplayName = "کاربر تست اول",
                             Email = "user1@company.com",
                             IsActive = true,
@@ -348,8 +393,8 @@ namespace Data.Migrations
                         },
                         new
                         {
-                            Id = 5,
-                            CreatedAt = new DateTime(2025, 9, 15, 4, 52, 58, 938, DateTimeKind.Utc).AddTicks(180),
+                            Id = 8,
+                            CreatedAt = new DateTime(2024, 1, 15, 10, 35, 0, 0, DateTimeKind.Utc),
                             DisplayName = "کاربر تست دوم",
                             Email = "user2@company.com",
                             IsActive = true,
@@ -370,7 +415,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Model.User", "UploadedByUser")
                         .WithMany()
                         .HasForeignKey("UploadedByUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Ticket");
@@ -389,7 +434,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Model.User", "User")
                         .WithMany("Messages")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Ticket");
@@ -401,11 +446,13 @@ namespace Data.Migrations
                 {
                     b.HasOne("Data.Model.User", "AssignedToUser")
                         .WithMany("AssignedTickets")
-                        .HasForeignKey("AssignedToUserId");
+                        .HasForeignKey("AssignedToUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Data.Model.User", "ClosedByUser")
                         .WithMany()
-                        .HasForeignKey("ClosedByUserId");
+                        .HasForeignKey("ClosedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Data.Model.User", "CreatedByUser")
                         .WithMany("CreatedTickets")
