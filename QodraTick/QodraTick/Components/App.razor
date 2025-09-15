@@ -8,9 +8,17 @@
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["QodraTick.styles.css"]" />
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
     <ImportMap />
     @* <script src="https://cdn.tiny.cloud/1/YOUR_API_KEY/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script> *@
     <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6.8.6-46/tinymce.min.js"></script>
+
+    <!-- SignalR -->
+    <script src="https://unpkg.com/@@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
+
 
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
@@ -30,8 +38,33 @@
 
 <body>
     <Routes @rendermode="InteractiveServer" />
-    <script src="_framework/blazor.web.js"></script>
-    <script src="js/tinymce-helper.js"></script>
-</body>
 
+    <!-- Scripts -->
+    <script src="_framework/blazor.web.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/tinymce-helper.js"></script>
+
+    <!-- Additional Scripts -->
+    <script>
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+        });
+
+        // Connection status indicator
+        window.addEventListener('beforeunload', function() {
+            if (window.ticketHubConnection) {
+                window.ticketHubConnection.stop();
+            }
+        });
+
+        // Auto-focus on input fields
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstInput = document.querySelector('input[type="text"]:not([readonly]), input[type="email"]:not([readonly]), textarea:not([readonly])');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        });
+    </script>
+</body>
 </html>

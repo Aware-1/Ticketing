@@ -34,7 +34,7 @@
     protected override async Task OnInitializedAsync()
     {
         tickets = await DbContext.Tickets
-            .Where(t => t.Status == "Open")
+            .Where(t => t.Status == TicketStatus.Open)
             .ToListAsync();
     }
 }

@@ -4,113 +4,54 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
-<div class="text-center mt-5">
-    <div class="spinner-border" role="status">
-        <span class="visually-hidden">در حال خروج...</span>
+<div class="d-flex justify-content-center align-items-center min-vh-100">
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">در حال خروج...</span>
+        </div>
+        <p class="mt-3 fs-5">در حال خروج از سیستم...</p>
+        <small class="text-muted">لطفاً صبر کنید...</small>
     </div>
-    <p class="mt-3">در حال خروج از سیستم...</p>
 </div>
 
 @code {
     protected override async Task OnInitializedAsync()
     {
-        await Task.Delay(1000);
-        
-        var httpContext = new DefaultHttpContext();
-        await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        
-        await JSRuntime.InvokeVoidAsync("localStorage.clear");
-        
-        Navigation.NavigateTo("/login", true);
-    }
-}
-
-// Components/Layout/MainLayout.razor - اصلاح شده
-@using Microsoft.AspNetCore.Components.Authorization
-@using Service.IService
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IUserService UserService
-@inherits LayoutComponentBase
-
-<div class="page">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">قدرا تیک</a>
-            
-            <div class="navbar-nav me-auto">
-                <AuthorizeView>
-                    <Authorized>
-                        <span class="navbar-text me-3">سلام @GetDisplayName(context.User)</span>
-                        <span class="badge bg-light text-dark me-2">@GetUserRole(context.User)</span>
-                        <a href="/logout" class="btn btn-outline-light btn-sm">خروج</a>
-                    </Authorized>
-                    <NotAuthorized>
-                        <a href="/login" class="btn btn-outline-light">ورود</a>
-                    </NotAuthorized>
-                </AuthorizeView>
-            </div>
-        </div>
-    </nav>
-
-    <AuthorizeView>
-        <Authorized>
-            <div class="container-fluid">
-                <div class="row">
-                    <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                        <div class="position-sticky pt-3">
-                            @{
-                                var userRole = context.User.FindFirst(ClaimTypes.Role)?.Value;
-                            }
-                            @switch (userRole)
-                            {
-                                case "User":
-                                    <UserNavigation />
-                                    break;
-                                case "Support":
-                                    <SupportNavigation />
-                                    break;
-                                case "Admin":
-                                    <AdminNavigation />
-                                    break;
-                                default:
-                                    <div class="alert alert-warning">نقش کاربری تشخیص داده نشد</div>
-                                    break;
-                            }
-                        </div>
-                    </nav>
-
-                    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                        @Body
-                    </main>
-                </div>
-            </div>
-        </Authorized>
-        <NotAuthorized>
-            @Body
-        </NotAuthorized>
-    </AuthorizeView>
-</div>
-
-<div id="blazor-error-ui">
-    خطایی رخ داده است. این برنامه ممکن است تا زمان بارگذاری مجدد پاسخ ندهد.
-    <a href="" class="reload">بارگذاری مجدد</a>
-    <a class="dismiss">🗙</a>
-</div>
-
-@code {
-    private string GetDisplayName(ClaimsPrincipal user)
-    {
-        return user.FindFirst("DisplayName")?.Value ?? user.Identity?.Name ?? "ناشناس";
-    }
-
-    private string GetUserRole(ClaimsPrincipal user)
-    {
-        return user.FindFirst(ClaimTypes.Role)?.Value switch
+        try
         {
-            "User" => "کاربر",
-            "Support" => "پشتیبان",
-            "Admin" => "ادمین",
-            _ => "نامشخص"
-        };
+            // Wait a moment for UI to show
+            await Task.Delay(1000);
+
+            // Clear client-side storage
+            await JSRuntime.InvokeVoidAsync("localStorage.clear");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
+
+            // Create HttpContext for sign out
+            var httpContext = new DefaultHttpContext();
+            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            // Clear any cookies
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", @"
+                    document.cookie.split(';').forEach(function(c) {
+                        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
+                    });
+                ");
+            }
+            catch
+            {
+                // Ignore cookie clearing errors
+            }
+
+            // Redirect to login
+            Navigation.NavigateTo("/login", true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logout error: {ex.Message}");
+            // Force navigation even if there's an error
+            Navigation.NavigateTo("/login", true);
+        }
     }
 }

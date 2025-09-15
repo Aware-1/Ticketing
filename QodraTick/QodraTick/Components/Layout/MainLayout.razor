@@ -7,95 +7,123 @@
 <div class="page">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">قدرا تیک</a>
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-ticket-perforated me-2"></i>
+                قدرا تیک
+            </a>
             
-            <div class="navbar-nav me-auto">
-                <AuthorizeView>
-                    <Authorized>
-                        <span class="navbar-text me-3">سلام @GetDisplayName(context.User)</span>
-                        <span class="badge bg-light text-dark me-2">@GetUserRole()</span>
-                    </Authorized>
-                    <NotAuthorized>
-                        <span class="navbar-text">لطفاً وارد شوید</span>
-                    </NotAuthorized>
-                </AuthorizeView>
+            <!-- Mobile menu toggle -->
+            <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav me-auto">
+                    <AuthorizeView>
+                        <Authorized>
+                            <span class="navbar-text me-3">
+                                <i class="bi bi-person-circle me-1"></i>
+                                سلام @GetDisplayName(context.User)
+                            </span>
+                            <span class="badge bg-light text-dark me-2">@GetUserRole(context.User)</span>
+                            <a href="/logout" class="btn btn-outline-light btn-sm">
+                                <i class="bi bi-box-arrow-right me-1"></i>
+                                خروج
+                            </a>
+                        </Authorized>
+                        <NotAuthorized>
+                            <a href="/login" class="btn btn-outline-light">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>
+                                ورود
+                            </a>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <AuthorizeView>
-                        <Authorized>
-                            @if (currentUser != null)
-                            {
-                                @switch (currentUser.Role)
-                                {
-                                    case UserRole.User:
-                                        <UserNavigation />
-                                        break;
-                                    case UserRole.Support:
-                                        <SupportNavigation />
-                                        break;
-                                    case UserRole.Admin:
-                                        <AdminNavigation />
-                                        break;
-                                }
+    <AuthorizeView>
+        <Authorized>
+            <div class="container-fluid">
+                <div class="row">
+                    <!-- Sidebar -->
+                    <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                        <div class="position-sticky pt-3">
+                            @{
+                                var userRole = context.User.FindFirst(ClaimTypes.Role)?.Value;
                             }
-                        </Authorized>
-                        <NotAuthorized>
-                            <div class="alert alert-info">
-                                برای نمایش منو وارد شوید
-                            </div>
-                        </NotAuthorized>
-                    </AuthorizeView>
-                </div>
-            </nav>
+                            @switch (userRole)
+                            {
+                                case "User":
+                                    <UserNavigation />
+                                    break;
+                                case "Support":
+                                    <SupportNavigation />
+                                    break;
+                                case "Admin":
+                                    <AdminNavigation />
+                                    break;
+                                default:
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        نقش کاربری تشخیص داده نشد
+                                    </div>
+                                    break;
+                            }
+                        </div>
+                    </nav>
 
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                @Body
-            </main>
+                    <!-- Main content -->
+                    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                        @Body
+                    </main>
+                </div>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <!-- Full-width content for unauthorized users (login page) -->
+            @Body
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+<!-- Error UI -->
+<div id="blazor-error-ui">
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        خطایی رخ داده است. این برنامه ممکن است تا زمان بارگذاری مجدد پاسخ ندهد.
+        <div class="mt-2">
+            <a href="" class="reload btn btn-sm btn-outline-danger me-2">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                بارگذاری مجدد
+            </a>
+            <a class="dismiss btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x me-1"></i>
+                بستن
+            </a>
         </div>
     </div>
 </div>
 
-<div id="blazor-error-ui">
-    خطایی رخ داده است. این برنامه ممکن است تا زمان بارگذاری مجدد پاسخ ندهد.
-    <a href="" class="reload">بارگذاری مجدد</a>
-    <a class="dismiss">🗙</a>
-</div>
+<!-- Notification Component -->
+<NotificationComponent />
 
 @code {
-    private User? currentUser;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        
-        if (authState.User.Identity?.IsAuthenticated == true)
-        {
-            var username = authState.User.Identity.Name;
-            var displayName = username; // فعلاً از username استفاده می‌کنیم
-            
-            // ایجاد یا بروزرسانی کاربر در دیتابیس
-            currentUser = await UserService.CreateOrUpdateUserAsync(username!, displayName!);
-        }
-    }
-
     private string GetDisplayName(ClaimsPrincipal user)
     {
-        return user.Identity?.Name ?? "ناشناس";
+        return user.FindFirst("DisplayName")?.Value ?? 
+               user.Identity?.Name ?? 
+               "کاربر";
     }
 
-    private string GetUserRole()
+    private string GetUserRole(ClaimsPrincipal user)
     {
-        return currentUser?.Role switch
+        return user.FindFirst(ClaimTypes.Role)?.Value switch
         {
-            UserRole.User => "کاربر",
-            UserRole.Support => "پشتیبان",
-            UserRole.Admin => "ادمین",
+            "User" => "کاربر",
+            "Support" => "پشتیبان",
+            "Admin" => "مدیر",
             _ => "نامشخص"
         };
     }
