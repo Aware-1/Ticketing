@@ -8,9 +8,11 @@ using Service.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+// ✅ Add Controllers support
+builder.Services.AddControllers();
+
+// ✅ Add HttpClient for calling APIs
+builder.Services.AddHttpClient();
 
 // Entity Framework with Warning Suppression
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -20,6 +22,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     // Suppress the PendingModelChangesWarning
     options.ConfigureWarnings(warnings =>
         warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
+
+// ✅ Configure Antiforgery with exemptions
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "__RequestVerificationToken";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
 // Cookie Authentication
@@ -39,9 +51,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         // Events for handling authentication redirects
         options.Events.OnRedirectToLogin = context =>
         {
-            // If this is an AJAX request, return 401 instead of redirecting
-            if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
-                context.Request.Headers["Content-Type"].ToString().Contains("application/json"))
+            // If this is an API request, return 401 instead of redirecting
+            if (context.Request.Path.StartsWithSegments("/api"))
             {
                 context.Response.StatusCode = 401;
                 return Task.CompletedTask;
@@ -95,6 +106,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// ✅ UseAntiforgery AFTER UseStaticFiles and BEFORE UseAuthentication
 app.UseAntiforgery();
 
 // CORS
@@ -105,6 +118,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// ✅ Map Controllers for API endpoints
+app.MapControllers();
 
 // Configure Render Modes - Mixed mode support
 app.MapRazorComponents<App>()

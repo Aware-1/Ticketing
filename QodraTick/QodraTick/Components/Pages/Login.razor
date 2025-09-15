@@ -2,7 +2,6 @@
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.Cookies
 @using System.Security.Claims
-@using System.ComponentModel.DataAnnotations
 @inject IUserService UserService
 @inject NavigationManager Navigation
 @inject IHttpContextAccessor HttpContextAccessor
@@ -21,10 +20,9 @@
 
                     @if (!string.IsNullOrEmpty(errorMessage))
                     {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <div class="alert alert-danger" role="alert">
                             <i class="bi bi-exclamation-triangle me-2"></i>
                             @errorMessage
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     }
 
@@ -36,90 +34,76 @@
                         </div>
                     }
 
-                    <form method="post" @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
+                    <!-- ✅ فرم HTML خالص -->
+                    <form method="post" action="/login" @onsubmit="HandleSubmit" @onsubmit:preventDefault="false">
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">
                                 <i class="bi bi-person me-1"></i>نام کاربری
                             </label>
-                            <input type="text" class="form-control form-control-lg"
-                                   placeholder="admin1" @bind="Username" required
-                                   autocomplete="username" />
+                            <input type="text" name="username" class="form-control form-control-lg"
+                                   placeholder="admin1" value="@Username" required />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">
                                 <i class="bi bi-lock me-1"></i>رمز عبور
                             </label>
-                            <input type="password" class="form-control form-control-lg"
-                                   placeholder="admin123" @bind="Password" required
-                                   autocomplete="current-password" />
+                            <input type="password" name="password" class="form-control form-control-lg"
+                                   placeholder="admin123" value="@Password" required />
                         </div>
 
                         <div class="mb-4 form-check">
-                            <input type="checkbox" class="form-check-input"
-                                   @bind="RememberMe" id="rememberMe" />
+                            <input type="checkbox" name="rememberMe" class="form-check-input"
+                                   id="rememberMe" checked="@RememberMe" />
                             <label class="form-check-label" for="rememberMe">
                                 مرا به خاطر بسپار (7 روز)
                             </label>
                         </div>
 
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg" disabled="@isLoading">
-                                @if (isLoading)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    <span>در حال ورود...</span>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-box-arrow-in-right me-2"></i>
-                                    <span>ورود به سیستم</span>
-                                }
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>
+                                ورود به سیستم
                             </button>
                         </div>
                     </form>
 
                     <hr class="my-4">
 
+                    <!-- دکمه‌های تست سریع -->
                     <div class="text-center">
-                        <h6 class="text-muted mb-3">
-                            <i class="bi bi-info-circle me-1"></i>
-                            حساب‌های تستی:
-                        </h6>
-
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <div class="border rounded p-2 bg-light">
-                                    <div class="row">
-                                        <div class="col-4">
-                                            <small class="text-primary fw-bold d-block">مدیر:</small>
-                                            <small class="font-monospace">admin1</small>
-                                            <br>
-                                            <small class="font-monospace">admin123</small>
-                                        </div>
-                                        <div class="col-4">
-                                            <small class="text-info fw-bold d-block">پشتیبان:</small>
-                                            <small class="font-monospace">support1</small>
-                                            <br>
-                                            <small class="font-monospace">support123</small>
-                                        </div>
-                                        <div class="col-4">
-                                            <small class="text-success fw-bold d-block">کاربر:</small>
-                                            <small class="font-monospace">user1</small>
-                                            <br>
-                                            <small class="font-monospace">user123</small>
-                                        </div>
-                                    </div>
-                                </div>
+                        <h6 class="text-muted mb-3">تست سریع:</h6>
+                        <div class="row g-1">
+                            <div class="col-4">
+                                <form method="post" action="/login" style="display: inline;">
+                                    <input type="hidden" name="username" value="admin1" />
+                                    <input type="hidden" name="password" value="admin123" />
+                                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                                        <i class="bi bi-shield me-1"></i>مدیر
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="col-4">
+                                <form method="post" action="/login" style="display: inline;">
+                                    <input type="hidden" name="username" value="support1" />
+                                    <input type="hidden" name="password" value="support123" />
+                                    <button type="submit" class="btn btn-outline-info btn-sm w-100">
+                                        <i class="bi bi-headset me-1"></i>پشتیبان
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="col-4">
+                                <form method="post" action="/login" style="display: inline;">
+                                    <input type="hidden" name="username" value="user1" />
+                                    <input type="hidden" name="password" value="user123" />
+                                    <button type="submit" class="btn btn-outline-success btn-sm w-100">
+                                        <i class="bi bi-person me-1"></i>کاربر
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="card-footer text-center text-muted py-3">
-                    <small>
-                        <i class="bi bi-shield-check me-1"></i>
-                        ورود امن با رمزنگاری کوکی
-                    </small>
                 </div>
             </div>
         </div>
@@ -127,24 +111,41 @@
 </div>
 
 @code {
-    // ❌ بدون @rendermode - این صفحه SSR هست
+    // ✅ SSR - بدون rendermode
 
-    private string Username = string.Empty;
-    private string Password = string.Empty;
-    private bool RememberMe = false;
-    private bool isLoading = false;
+    [SupplyParameterFromForm]
+    public string Username { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm]
+    public string Password { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm]
+    public bool RememberMe { get; set; } = false;
+
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
-    private async Task HandleLogin()
+    protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
-        errorMessage = string.Empty;
-        successMessage = string.Empty;
+        // اگر کاربر قبلاً لاگین کرده، redirect کن
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+    }
 
+    private async Task HandleSubmit()
+    {
+        // این متد وقتی فرم submit میشه اجرا میشه
+        await ProcessLogin();
+    }
+
+    private async Task ProcessLogin()
+    {
         try
         {
-            // Validate input
             if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
                 errorMessage = "نام کاربری و رمز عبور الزامی است.";
@@ -156,9 +157,7 @@
 
             if (user != null)
             {
-                // Get actual HttpContext from IHttpContextAccessor
                 var httpContext = HttpContextAccessor.HttpContext;
-
                 if (httpContext != null)
                 {
                     // Create claims
@@ -182,38 +181,37 @@
                         IssuedUtc = DateTimeOffset.UtcNow
                     };
 
-                    // ✅ Sign in using REAL HttpContext - This works in SSR!
+                    // ✅ SignIn در SSR mode - این کار می‌کنه!
                     await httpContext.SignInAsync(
                         CookieAuthenticationDefaults.AuthenticationScheme,
                         claimsPrincipal,
                         authProperties);
 
-                    successMessage = "ورود موفقیت‌آمیز! در حال انتقال به داشبورد...";
-
-                    // Small delay to show success message
-                    await Task.Delay(1500);
-
-                    // Navigate to home page
+                    // Redirect to home
                     Navigation.NavigateTo("/", true);
                 }
                 else
                 {
-                    errorMessage = "خطا در دسترسی به HttpContext. لطفاً دوباره تلاش کنید.";
+                    errorMessage = "خطا در دسترسی به HttpContext.";
                 }
             }
             else
             {
-                errorMessage = "نام کاربری یا رمز عبور اشتباه است. لطفاً دوباره تلاش کنید.";
+                errorMessage = "نام کاربری یا رمز عبور اشتباه است.";
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"خطا در ورود: {ex.Message}";
-            Console.WriteLine($"Login error: {ex}");
         }
-        finally
+    }
+
+    // اگر فرم پست شده، پردازش کن
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password))
         {
-            isLoading = false;
+            await ProcessLogin();
         }
     }
 }
