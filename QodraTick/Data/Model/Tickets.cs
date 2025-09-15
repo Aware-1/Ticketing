@@ -45,13 +45,13 @@ public class Ticket
 
     public TicketCategory Category { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
 
     public DateTime? AssignedAt { get; set; }
 
     public DateTime? ClosedAt { get; set; }
 
-    public DateTime LastActivityAt { get; set; } = DateTime.UtcNow;
+    public DateTime LastActivityAt { get; set; }
 
     // Foreign Keys با DataAnnotation
     [ForeignKey(nameof(CreatedByUser))]

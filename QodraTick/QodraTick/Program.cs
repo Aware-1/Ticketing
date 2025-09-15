@@ -12,9 +12,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Entity Framework
+// Entity Framework with Warning Suppression
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+
+    // Suppress the PendingModelChangesWarning
+    options.ConfigureWarnings(warnings =>
+        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
 
 // Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -67,7 +73,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -94,14 +99,27 @@ app.MapHub<TicketHub>("/ticketHub");
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
     try
     {
-        dbContext.Database.EnsureCreated();
+        // Delete and recreate database if needed
+        if (app.Environment.IsDevelopment())
+        {
+            await dbContext.Database.EnsureDeletedAsync();
+            await dbContext.Database.EnsureCreatedAsync();
+            logger.LogInformation("دیتابیس با موفقیت ایجاد شد");
+        }
+        else
+        {
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("Migration ها با موفقیت اجرا شدند");
+        }
     }
     catch (Exception ex)
     {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "خطا در ایجاد دیتابیس");
+        logger.LogError(ex, "خطا در ایجاد یا migration دیتابیس");
+        throw; // Re-throw to prevent startup with bad database
     }
 }
 

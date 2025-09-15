@@ -22,7 +22,7 @@ namespace Data.Model
 
         public long FileSize { get; set; }
 
-        public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UploadedAt { get; set; }
 
         // Foreign Keys با DataAnnotation - فقط برای تیکت
         [ForeignKey(nameof(Ticket))]

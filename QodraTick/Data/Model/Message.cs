@@ -13,7 +13,7 @@ namespace Data.Model
         [Column(TypeName = "nvarchar(max)")]
         public string Content { get; set; } = string.Empty; // HTML from TinyMCE
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
 
         public bool IsFromSupport { get; set; } // true = پشتیبان، false = کاربر
 

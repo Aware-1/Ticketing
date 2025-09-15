@@ -43,7 +43,7 @@ namespace Data.Model
         [StringLength(100)]
         public string Password { get; set; } = string.Empty; // بدون Hash فعلاً
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
 
         public bool IsActive { get; set; } = true;
 
