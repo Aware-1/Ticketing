@@ -4,27 +4,48 @@
 @inject NavigationManager Navigation
 @inject IHttpContextAccessor HttpContextAccessor
 
-<div class="d-flex justify-content-center align-items-center min-vh-100">
+<PageTitle>خروج - قدرا تیک</PageTitle>
+
+<div class="container-fluid vh-100 d-flex align-items-center justify-content-center bg-light">
     <div class="text-center">
-        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">در حال خروج...</span>
+        <div class="card border-0 shadow-lg" style="max-width: 400px;">
+            <div class="card-body p-5">
+                <div class="mb-4">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">در حال خروج...</span>
+                    </div>
+                    <h4 class="text-primary">در حال خروج از سیستم</h4>
+                    <p class="text-muted">لطفاً چند لحظه صبر کنید...</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        @errorMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        @successMessage
+                    </div>
+                }
+
+                <div class="progress" style="height: 4px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                         style="width: 100%"></div>
+                </div>
+            </div>
         </div>
-        <p class="mt-3 fs-5">در حال خروج از سیستم...</p>
-        <small class="text-muted">لطفاً صبر کنید...</small>
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger mt-3">@errorMessage</div>
-        }
-
-        @if (!string.IsNullOrEmpty(successMessage))
-        {
-            <div class="alert alert-success mt-3">@successMessage</div>
-        }
     </div>
 </div>
 
 @code {
+    // ❌ بدون @rendermode - این صفحه SSR هست
+
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
@@ -35,15 +56,15 @@
             // Wait a moment for UI to show
             await Task.Delay(1000);
 
-            // Get actual HttpContext
+            // Get actual HttpContext from IHttpContextAccessor
             var httpContext = HttpContextAccessor.HttpContext;
 
             if (httpContext != null)
             {
-                // Sign out using real HttpContext
+                // ✅ Sign out using REAL HttpContext - This works in SSR!
                 await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-                successMessage = "خروج موفقیت‌آمیز! در حال انتقال...";
+                successMessage = "خروج موفقیت‌آمیز! در حال انتقال به صفحه ورود...";
 
                 // Wait a bit more to show success message
                 await Task.Delay(1500);

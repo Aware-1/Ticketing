@@ -4,30 +4,40 @@
 
 <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card border-warning">
-                <div class="card-header bg-warning text-dark text-center">
-                    <h3><i class="bi bi-shield-exclamation me-2"></i>دسترسی محدود</h3>
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-warning shadow-lg">
+                <div class="card-header bg-warning text-dark text-center py-4">
+                    <h3 class="mb-1"><i class="bi bi-shield-exclamation me-2"></i>دسترسی محدود</h3>
+                    <small>Access Denied - Error 403</small>
                 </div>
-                <div class="card-body text-center">
+                <div class="card-body text-center p-5">
                     <div class="mb-4">
-                        <i class="bi bi-lock-fill text-warning" style="font-size: 4rem;"></i>
+                        <i class="bi bi-lock-fill text-warning" style="font-size: 5rem;"></i>
                     </div>
 
-                    <h4 class="card-title">شما مجوز دسترسی به این بخش را ندارید</h4>
+                    <h4 class="card-title mb-3">شما مجوز دسترسی به این بخش را ندارید</h4>
 
-                    <p class="card-text text-muted">
+                    <p class="card-text text-muted mb-4">
                         متأسفانه سطح دسترسی شما برای مشاهده این صفحه کافی نیست.
-                        لطفاً با مدیر سیستم تماس بگیرید یا به صفحه مناسب نقش کاربری خود مراجعه کنید.
+                        این ممکن است به دلایل زیر باشد:
                     </p>
 
-                    <div class="d-grid gap-2 d-md-block">
-                        <a href="/" class="btn btn-primary">
+                    <div class="alert alert-light text-start mb-4">
+                        <ul class="mb-0">
+                            <li>نقش کاربری شما دسترسی لازم را ندارد</li>
+                            <li>جلسه کاری شما منقضی شده است</li>
+                            <li>صفحه مورد نظر محدود به کاربران خاص است</li>
+                            <li>خطا در تشخیص هویت رخ داده است</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-block mb-4">
+                        <a href="/" class="btn btn-primary btn-lg">
                             <i class="bi bi-house-door me-2"></i>
                             بازگشت به صفحه اصلی
                         </a>
 
-                        <a href="/logout" class="btn btn-outline-secondary">
+                        <a href="/logout" class="btn btn-outline-secondary btn-lg">
                             <i class="bi bi-box-arrow-right me-2"></i>
                             خروج و ورود مجدد
                         </a>
@@ -37,20 +47,43 @@
 
                     <AuthorizeView>
                         <Authorized>
-                            <div class="alert alert-info">
-                                <small>
-                                    <strong>اطلاعات کاربری:</strong><br>
-                                    نام: @context.User.FindFirst("DisplayName")?.Value<br>
-                                    نقش: @GetRoleDisplayName(context.User.FindFirst(ClaimTypes.Role)?.Value)
-                                </small>
+                            <div class="alert alert-info border-0">
+                                <h6><i class="bi bi-person-badge me-2"></i>اطلاعات کاربری فعلی:</h6>
+                                <div class="row text-start">
+                                    <div class="col-sm-6">
+                                        <strong>نام:</strong> @(context.User.FindFirst("DisplayName")?.Value ?? "نامشخص")
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <strong>نقش:</strong>
+                                        <span class="badge @GetRoleBadgeClass(context.User.FindFirst(ClaimTypes.Role)?.Value)">
+                                            @GetRoleDisplayName(context.User.FindFirst(ClaimTypes.Role)?.Value)
+                                        </span>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <strong>نام کاربری:</strong> @(context.User.FindFirst(ClaimTypes.Name)?.Value ?? "نامشخص")
+                                    </div>
+                                </div>
                             </div>
                         </Authorized>
                         <NotAuthorized>
-                            <div class="alert alert-warning">
-                                <small>شما وارد سیستم نشده‌اید. لطفاً ابتدا وارد شوید.</small>
+                            <div class="alert alert-warning border-0">
+                                <h6><i class="bi bi-exclamation-triangle me-2"></i>وضعیت احراز هویت:</h6>
+                                <p class="mb-0">شما وارد سیستم نشده‌اید. لطفاً ابتدا وارد شوید.</p>
+                                <div class="mt-3">
+                                    <a href="/login" class="btn btn-warning">
+                                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                                        ورود به سیستم
+                                    </a>
+                                </div>
                             </div>
                         </NotAuthorized>
                     </AuthorizeView>
+                </div>
+                <div class="card-footer text-center text-muted py-3">
+                    <small>
+                        <i class="bi bi-info-circle me-1"></i>
+                        در صورت تکرار این مشکل، با مدیر سیستم تماس بگیرید.
+                    </small>
                 </div>
             </div>
         </div>
@@ -58,11 +91,21 @@
 </div>
 
 @code {
+    // ❌ بدون @rendermode - این صفحه SSR هست
+
     private string GetRoleDisplayName(string? role) => role switch
     {
         "User" => "کاربر عادی",
         "Support" => "پشتیبان",
         "Admin" => "مدیر سیستم",
         _ => "نامشخص"
+    };
+
+    private string GetRoleBadgeClass(string? role) => role switch
+    {
+        "User" => "bg-primary",
+        "Support" => "bg-info",
+        "Admin" => "bg-warning text-dark",
+        _ => "bg-secondary"
     };
 }

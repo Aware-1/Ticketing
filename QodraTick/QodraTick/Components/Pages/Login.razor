@@ -9,79 +9,117 @@
 
 <PageTitle>ورود - قدرا تیک</PageTitle>
 
-<div class="row justify-content-center min-vh-100 align-items-center">
-    <div class="col-md-4">
-        <div class="card shadow">
-            <div class="card-header text-center bg-primary text-white">
-                <h3>ورود به سیستم</h3>
-                <small>سیستم مدیریت تیکت قدرا</small>
-            </div>
-            <div class="card-body">
+<div class="container-fluid vh-100 d-flex align-items-center justify-content-center bg-light">
+    <div class="row w-100">
+        <div class="col-md-4 mx-auto">
+            <div class="card shadow-lg border-0">
+                <div class="card-header text-center bg-primary text-white py-4">
+                    <h3 class="mb-1"><i class="bi bi-ticket-perforated me-2"></i>قدرا تیک</h3>
+                    <small>سیستم مدیریت تیکت</small>
+                </div>
+                <div class="card-body p-4">
 
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-danger">@errorMessage</div>
-                }
-
-                @if (!string.IsNullOrEmpty(successMessage))
-                {
-                    <div class="alert alert-success">@successMessage</div>
-                }
-
-                <form method="post" @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
-                    <div class="mb-3">
-                        <label class="form-label">نام کاربری</label>
-                        <input type="text" class="form-control" placeholder="admin1" @bind="Username" required />
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">رمز عبور</label>
-                        <input type="password" class="form-control" placeholder="admin123" @bind="Password" required />
-                    </div>
-
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" @bind="RememberMe" id="rememberMe" />
-                        <label class="form-check-label" for="rememberMe">
-                            مرا به خاطر بسپار
-                        </label>
-                    </div>
-
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary" disabled="@isLoading">
-                            @if (isLoading)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span>در حال ورود...</span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-box-arrow-in-right me-2"></i>
-                                <span>ورود</span>
-                            }
-                        </button>
-                    </div>
-                </form>
-
-                <hr class="my-4">
-
-                <div class="text-center">
-                    <h6 class="text-muted">حساب‌های تستی:</h6>
-                    <div class="row">
-                        <div class="col-6">
-                            <small class="text-muted d-block"><strong>مدیر:</strong></small>
-                            <small class="text-muted">admin1 / admin123</small>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @errorMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block"><strong>پشتیبان:</strong></small>
-                            <small class="text-muted">support1 / support123</small>
+                    }
+
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success" role="alert">
+                            <i class="bi bi-check-circle me-2"></i>
+                            @successMessage
+                        </div>
+                    }
+
+                    <form method="post" @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-person me-1"></i>نام کاربری
+                            </label>
+                            <input type="text" class="form-control form-control-lg"
+                                   placeholder="admin1" @bind="Username" required
+                                   autocomplete="username" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-lock me-1"></i>رمز عبور
+                            </label>
+                            <input type="password" class="form-control form-control-lg"
+                                   placeholder="admin123" @bind="Password" required
+                                   autocomplete="current-password" />
+                        </div>
+
+                        <div class="mb-4 form-check">
+                            <input type="checkbox" class="form-check-input"
+                                   @bind="RememberMe" id="rememberMe" />
+                            <label class="form-check-label" for="rememberMe">
+                                مرا به خاطر بسپار (7 روز)
+                            </label>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>در حال ورود...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                                    <span>ورود به سیستم</span>
+                                }
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <h6 class="text-muted mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            حساب‌های تستی:
+                        </h6>
+
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <div class="border rounded p-2 bg-light">
+                                    <div class="row">
+                                        <div class="col-4">
+                                            <small class="text-primary fw-bold d-block">مدیر:</small>
+                                            <small class="font-monospace">admin1</small>
+                                            <br>
+                                            <small class="font-monospace">admin123</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <small class="text-info fw-bold d-block">پشتیبان:</small>
+                                            <small class="font-monospace">support1</small>
+                                            <br>
+                                            <small class="font-monospace">support123</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <small class="text-success fw-bold d-block">کاربر:</small>
+                                            <small class="font-monospace">user1</small>
+                                            <br>
+                                            <small class="font-monospace">user123</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <small class="text-muted d-block"><strong>کاربر:</strong></small>
-                            <small class="text-muted">user1 / user123</small>
-                        </div>
-                    </div>
+                </div>
+                <div class="card-footer text-center text-muted py-3">
+                    <small>
+                        <i class="bi bi-shield-check me-1"></i>
+                        ورود امن با رمزنگاری کوکی
+                    </small>
                 </div>
             </div>
         </div>
@@ -89,6 +127,8 @@
 </div>
 
 @code {
+    // ❌ بدون @rendermode - این صفحه SSR هست
+
     private string Username = string.Empty;
     private string Password = string.Empty;
     private bool RememberMe = false;
@@ -116,7 +156,7 @@
 
             if (user != null)
             {
-                // Get actual HttpContext
+                // Get actual HttpContext from IHttpContextAccessor
                 var httpContext = HttpContextAccessor.HttpContext;
 
                 if (httpContext != null)
@@ -138,34 +178,38 @@
                     var authProperties = new AuthenticationProperties
                     {
                         IsPersistent = RememberMe,
-                        ExpiresUtc = RememberMe ? DateTimeOffset.UtcNow.AddDays(7) : DateTimeOffset.UtcNow.AddHours(1)
+                        ExpiresUtc = RememberMe ? DateTimeOffset.UtcNow.AddDays(7) : DateTimeOffset.UtcNow.AddHours(1),
+                        IssuedUtc = DateTimeOffset.UtcNow
                     };
 
-                    // Sign in using real HttpContext
+                    // ✅ Sign in using REAL HttpContext - This works in SSR!
                     await httpContext.SignInAsync(
                         CookieAuthenticationDefaults.AuthenticationScheme,
                         claimsPrincipal,
                         authProperties);
 
-                    successMessage = "ورود موفقیت‌آمیز! در حال انتقال...";
+                    successMessage = "ورود موفقیت‌آمیز! در حال انتقال به داشبورد...";
 
-                    // Redirect after a short delay
+                    // Small delay to show success message
                     await Task.Delay(1500);
+
+                    // Navigate to home page
                     Navigation.NavigateTo("/", true);
                 }
                 else
                 {
-                    errorMessage = "خطا در دسترسی به HttpContext.";
+                    errorMessage = "خطا در دسترسی به HttpContext. لطفاً دوباره تلاش کنید.";
                 }
             }
             else
             {
-                errorMessage = "نام کاربری یا رمز عبور اشتباه است.";
+                errorMessage = "نام کاربری یا رمز عبور اشتباه است. لطفاً دوباره تلاش کنید.";
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"خطا در ورود: {ex.Message}";
+            Console.WriteLine($"Login error: {ex}");
         }
         finally
         {

@@ -5,12 +5,19 @@
 <PageTitle>داشبورد - قدرا تیک</PageTitle>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">داشبورد</h1>
+    <h1 class="h2">
+        <i class="bi bi-speedometer2 me-2 text-primary"></i>
+        داشبورد
+    </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
-                <i class="bi bi-arrow-clockwise"></i>
+                <i class="bi bi-arrow-clockwise me-1"></i>
                 تازه‌سازی
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i>
+                چاپ
             </button>
         </div>
     </div>
@@ -21,54 +28,110 @@
         @{
             var userRole = context.User.FindFirst(ClaimTypes.Role)?.Value;
             var displayName = context.User.FindFirst("DisplayName")?.Value ?? "کاربر";
+            var userName = context.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
         }
 
-        <div class="alert alert-primary">
-            <h4><i class="bi bi-person-circle me-2"></i>خوش آمدید @displayName!</h4>
-            <p class="mb-0">شما با نقش <strong>@GetRoleDisplayName(userRole)</strong> وارد شده‌اید.</p>
+        <!-- Welcome Header -->
+        <div class="alert alert-primary border-0 shadow-sm mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4 class="alert-heading mb-2">
+                        <i class="bi bi-person-circle me-2"></i>
+                        خوش آمدید @displayName!
+                    </h4>
+                    <p class="mb-0">
+                        شما با نقش <strong class="text-decoration-underline">@GetRoleDisplayName(userRole)</strong> وارد شده‌اید.
+                        <br>
+                        <small class="text-muted">
+                            آخرین ورود: @DateTime.Now.ToString("yyyy/MM/dd - HH:mm") | نام کاربری: @userName
+                        </small>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        <a href="/profile" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-person-gear me-1"></i>
+                            پروفایل
+                        </a>
+                        <a href="/logout" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-box-arrow-right me-1"></i>
+                            خروج
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
 
         @switch (userRole)
         {
             case "User":
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-plus-circle text-primary" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">تیکت جدید</h5>
-                                <p class="card-text">ایجاد درخواست پشتیبانی جدید</p>
-                                <a href="/tickets/create" class="btn btn-primary">ایجاد تیکت</a>
+                <!-- User Dashboard -->
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-primary mb-3">
+                                    <i class="bi bi-plus-circle-fill"></i>
+                                </div>
+                                <h5 class="card-title">تیکت جدید</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    ایجاد درخواست پشتیبانی جدید
+                                </p>
+                                <a href="/tickets/create" class="btn btn-primary">
+                                    <i class="bi bi-plus me-1"></i>
+                                    ایجاد تیکت
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-list-ul text-info" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">تیکت‌های من</h5>
-                                <p class="card-text">مشاهده تیکت‌های ارسالی</p>
-                                <a href="/tickets/my" class="btn btn-info">مشاهده تیکت‌ها</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-info mb-3">
+                                    <i class="bi bi-list-ul"></i>
+                                </div>
+                                <h5 class="card-title">تیکت‌های من</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    مشاهده و پیگیری تیکت‌های ارسالی
+                                </p>
+                                <a href="/tickets/my" class="btn btn-info">
+                                    <i class="bi bi-eye me-1"></i>
+                                    مشاهده تیکت‌ها
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-clock-history text-warning" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">وضعیت تیکت‌ها</h5>
-                                <p class="card-text">پیگیری وضعیت درخواست‌ها</p>
-                                <a href="/tickets/status" class="btn btn-warning">بررسی وضعیت</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-warning mb-3">
+                                    <i class="bi bi-clock-history"></i>
+                                </div>
+                                <h5 class="card-title">وضعیت تیکت‌ها</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    پیگیری وضعیت درخواست‌ها
+                                </p>
+                                <a href="/tickets/status" class="btn btn-warning">
+                                    <i class="bi bi-graph-up me-1"></i>
+                                    بررسی وضعیت
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-question-circle text-secondary" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">راهنما</h5>
-                                <p class="card-text">راهنمای استفاده از سیستم</p>
-                                <a href="/help" class="btn btn-secondary">مشاهده راهنما</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-secondary mb-3">
+                                    <i class="bi bi-question-circle"></i>
+                                </div>
+                                <h5 class="card-title">راهنما</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    راهنمای استفاده از سیستم
+                                </p>
+                                <a href="/help" class="btn btn-secondary">
+                                    <i class="bi bi-book me-1"></i>
+                                    مشاهده راهنما
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -76,44 +139,73 @@
                 break;
 
             case "Support":
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-inbox text-primary" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">تیکت‌های جدید</h5>
-                                <p class="card-text">پاسخ به درخواست‌های جدید</p>
-                                <a href="/support/tickets" class="btn btn-primary">مشاهده تیکت‌ها</a>
+                <!-- Support Dashboard -->
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-primary mb-3">
+                                    <i class="bi bi-inbox-fill"></i>
+                                </div>
+                                <h5 class="card-title">تیکت‌های جدید</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    پاسخ به درخواست‌های جدید
+                                </p>
+                                <a href="/support/tickets" class="btn btn-primary">
+                                    <i class="bi bi-arrow-right me-1"></i>
+                                    مشاهده تیکت‌ها
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-person-workspace text-success" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">تیکت‌های من</h5>
-                                <p class="card-text">مدیریت تیکت‌های اختصاص یافته</p>
-                                <a href="/support/my-tickets" class="btn btn-success">تیکت‌های من</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-success mb-3">
+                                    <i class="bi bi-person-workspace"></i>
+                                </div>
+                                <h5 class="card-title">تیکت‌های من</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    مدیریت تیکت‌های اختصاص یافته
+                                </p>
+                                <a href="/support/my-tickets" class="btn btn-success">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    تیکت‌های من
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-graph-up text-info" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">آمار عملکرد</h5>
-                                <p class="card-text">بررسی آمار پاسخگویی</p>
-                                <a href="/support/stats" class="btn btn-info">مشاهده آمار</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-info mb-3">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                </div>
+                                <h5 class="card-title">آمار عملکرد</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    بررسی آمار پاسخگویی
+                                </p>
+                                <a href="/support/stats" class="btn btn-info">
+                                    <i class="bi bi-bar-chart me-1"></i>
+                                    مشاهده آمار
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-chat-dots text-warning" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">چت آنلاین</h5>
-                                <p class="card-text">پشتیبانی آنلاین مشتریان</p>
-                                <a href="/support/chat" class="btn btn-warning">شروع چت</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-warning mb-3">
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                </div>
+                                <h5 class="card-title">چت آنلاین</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    پشتیبانی آنلاین مشتریان
+                                </p>
+                                <a href="/support/chat" class="btn btn-warning">
+                                    <i class="bi bi-chat-square-dots me-1"></i>
+                                    شروع چت
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -121,44 +213,73 @@
                 break;
 
             case "Admin":
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-bar-chart text-primary" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">گزارش‌های مدیریتی</h5>
-                                <p class="card-text">تحلیل عملکرد سیستم</p>
-                                <a href="/admin/reports" class="btn btn-primary">مشاهده گزارش‌ها</a>
+                <!-- Admin Dashboard -->
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-primary mb-3">
+                                    <i class="bi bi-bar-chart-fill"></i>
+                                </div>
+                                <h5 class="card-title">گزارش‌های مدیریتی</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    تحلیل عملکرد سیستم و تیم
+                                </p>
+                                <a href="/admin/reports" class="btn btn-primary">
+                                    <i class="bi bi-graph-up me-1"></i>
+                                    مشاهده گزارش‌ها
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-people text-success" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">مدیریت کاربران</h5>
-                                <p class="card-text">کاربران و پشتیبانان سیستم</p>
-                                <a href="/admin/users" class="btn btn-success">مدیریت کاربران</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-success mb-3">
+                                    <i class="bi bi-people-fill"></i>
+                                </div>
+                                <h5 class="card-title">مدیریت کاربران</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    کاربران، پشتیبانان و دسترسی‌ها
+                                </p>
+                                <a href="/admin/users" class="btn btn-success">
+                                    <i class="bi bi-person-plus me-1"></i>
+                                    مدیریت کاربران
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-gear text-info" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">تنظیمات سیستم</h5>
-                                <p class="card-text">پیکربندی عمومی سیستم</p>
-                                <a href="/admin/settings" class="btn btn-info">تنظیمات</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-info mb-3">
+                                    <i class="bi bi-gear-fill"></i>
+                                </div>
+                                <h5 class="card-title">تنظیمات سیستم</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    پیکربندی عمومی سیستم
+                                </p>
+                                <a href="/admin/settings" class="btn btn-info">
+                                    <i class="bi bi-sliders me-1"></i>
+                                    تنظیمات
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-shield-check text-warning" style="font-size: 2rem;"></i>
-                                <h5 class="card-title mt-2">امنیت و دسترسی</h5>
-                                <p class="card-text">مدیریت سطوح دسترسی</p>
-                                <a href="/admin/security" class="btn btn-warning">امنیت</a>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card text-center h-100 shadow-sm border-0">
+                            <div class="card-body d-flex flex-column">
+                                <div class="display-4 text-warning mb-3">
+                                    <i class="bi bi-shield-check"></i>
+                                </div>
+                                <h5 class="card-title">امنیت و دسترسی</h5>
+                                <p class="card-text text-muted flex-grow-1">
+                                    مدیریت سطوح دسترسی
+                                </p>
+                                <a href="/admin/security" class="btn btn-warning">
+                                    <i class="bi bi-lock me-1"></i>
+                                    امنیت
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -166,29 +287,47 @@
                 break;
 
             default:
-                <div class="alert alert-warning">
-                    <h4>خوش آمدید!</h4>
-                    <p>نقش کاربری شما تشخیص داده نشد. لطفاً با مدیر سیستم تماس بگیرید.</p>
-                    <a href="/logout" class="btn btn-warning">خروج و ورود مجدد</a>
+                <div class="alert alert-warning border-0 shadow-sm">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4><i class="bi bi-exclamation-triangle me-2"></i>خوش آمدید!</h4>
+                            <p class="mb-0">نقش کاربری شما تشخیص داده نشد. لطفاً با مدیر سیستم تماس بگیرید.</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="/logout" class="btn btn-warning">
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                خروج و ورود مجدد
+                            </a>
+                        </div>
+                    </div>
                 </div>
                 break;
         }
     </Authorized>
     <NotAuthorized>
-        <div class="text-center">
-            <div class="alert alert-info">
-                <h3><i class="bi bi-shield-lock me-2"></i>به سیستم قدرا تیک خوش آمدید</h3>
-                <p>برای استفاده از سیستم مدیریت تیکت لطفاً وارد شوید.</p>
-                <a href="/login" class="btn btn-primary btn-lg">
-                    <i class="bi bi-box-arrow-in-right me-2"></i>
-                    ورود به سیستم
-                </a>
+        <div class="text-center py-5">
+            <div class="card border-0 shadow-lg mx-auto" style="max-width: 600px;">
+                <div class="card-body p-5">
+                    <div class="display-1 text-primary mb-4">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h3 class="card-title">به سیستم قدرا تیک خوش آمدید</h3>
+                    <p class="card-text text-muted mb-4">
+                        برای استفاده از سیستم مدیریت تیکت و دسترسی به امکانات آن، لطفاً وارد شوید.
+                    </p>
+                    <a href="/login" class="btn btn-primary btn-lg px-4">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>
+                        ورود به سیستم
+                    </a>
+                </div>
             </div>
         </div>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
+    // ❌ بدون @rendermode - این صفحه SSR هست
+
     private string GetRoleDisplayName(string? role) => role switch
     {
         "User" => "کاربر عادی",
