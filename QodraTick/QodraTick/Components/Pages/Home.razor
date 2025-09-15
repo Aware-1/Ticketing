@@ -1,43 +1,199 @@
 ﻿@page "/"
 @attribute [Authorize]
-@rendermode InteractiveServer
 @inject IUserService UserService
 
 <PageTitle>داشبورد - قدرا تیک</PageTitle>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">داشبورد</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise"></i>
+                تازه‌سازی
+            </button>
+        </div>
+    </div>
 </div>
 
 <AuthorizeView>
     <Authorized>
         @{
             var userRole = context.User.FindFirst(ClaimTypes.Role)?.Value;
+            var displayName = context.User.FindFirst("DisplayName")?.Value ?? "کاربر";
         }
+
+        <div class="alert alert-primary">
+            <h4><i class="bi bi-person-circle me-2"></i>خوش آمدید @displayName!</h4>
+            <p class="mb-0">شما با نقش <strong>@GetRoleDisplayName(userRole)</strong> وارد شده‌اید.</p>
+        </div>
+
         @switch (userRole)
         {
             case "User":
-                <UserDashboard />
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-plus-circle text-primary" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">تیکت جدید</h5>
+                                <p class="card-text">ایجاد درخواست پشتیبانی جدید</p>
+                                <a href="/tickets/create" class="btn btn-primary">ایجاد تیکت</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-list-ul text-info" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">تیکت‌های من</h5>
+                                <p class="card-text">مشاهده تیکت‌های ارسالی</p>
+                                <a href="/tickets/my" class="btn btn-info">مشاهده تیکت‌ها</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-clock-history text-warning" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">وضعیت تیکت‌ها</h5>
+                                <p class="card-text">پیگیری وضعیت درخواست‌ها</p>
+                                <a href="/tickets/status" class="btn btn-warning">بررسی وضعیت</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-question-circle text-secondary" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">راهنما</h5>
+                                <p class="card-text">راهنمای استفاده از سیستم</p>
+                                <a href="/help" class="btn btn-secondary">مشاهده راهنما</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 break;
+
             case "Support":
-                <SupportDashboard />
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-inbox text-primary" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">تیکت‌های جدید</h5>
+                                <p class="card-text">پاسخ به درخواست‌های جدید</p>
+                                <a href="/support/tickets" class="btn btn-primary">مشاهده تیکت‌ها</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-person-workspace text-success" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">تیکت‌های من</h5>
+                                <p class="card-text">مدیریت تیکت‌های اختصاص یافته</p>
+                                <a href="/support/my-tickets" class="btn btn-success">تیکت‌های من</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-graph-up text-info" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">آمار عملکرد</h5>
+                                <p class="card-text">بررسی آمار پاسخگویی</p>
+                                <a href="/support/stats" class="btn btn-info">مشاهده آمار</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-chat-dots text-warning" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">چت آنلاین</h5>
+                                <p class="card-text">پشتیبانی آنلاین مشتریان</p>
+                                <a href="/support/chat" class="btn btn-warning">شروع چت</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 break;
+
             case "Admin":
-                <AdminDashboard />
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-bar-chart text-primary" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">گزارش‌های مدیریتی</h5>
+                                <p class="card-text">تحلیل عملکرد سیستم</p>
+                                <a href="/admin/reports" class="btn btn-primary">مشاهده گزارش‌ها</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-people text-success" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">مدیریت کاربران</h5>
+                                <p class="card-text">کاربران و پشتیبانان سیستم</p>
+                                <a href="/admin/users" class="btn btn-success">مدیریت کاربران</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-gear text-info" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">تنظیمات سیستم</h5>
+                                <p class="card-text">پیکربندی عمومی سیستم</p>
+                                <a href="/admin/settings" class="btn btn-info">تنظیمات</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-shield-check text-warning" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">امنیت و دسترسی</h5>
+                                <p class="card-text">مدیریت سطوح دسترسی</p>
+                                <a href="/admin/security" class="btn btn-warning">امنیت</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 break;
+
             default:
                 <div class="alert alert-warning">
                     <h4>خوش آمدید!</h4>
                     <p>نقش کاربری شما تشخیص داده نشد. لطفاً با مدیر سیستم تماس بگیرید.</p>
+                    <a href="/logout" class="btn btn-warning">خروج و ورود مجدد</a>
                 </div>
                 break;
         }
     </Authorized>
     <NotAuthorized>
         <div class="text-center">
-            <h3>به سیستم قدرا تیک خوش آمدید</h3>
-            <p>برای استفاده از سیستم لطفاً وارد شوید.</p>
-            <a href="/login" class="btn btn-primary">ورود به سیستم</a>
+            <div class="alert alert-info">
+                <h3><i class="bi bi-shield-lock me-2"></i>به سیستم قدرا تیک خوش آمدید</h3>
+                <p>برای استفاده از سیستم مدیریت تیکت لطفاً وارد شوید.</p>
+                <a href="/login" class="btn btn-primary btn-lg">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                    ورود به سیستم
+                </a>
+            </div>
         </div>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private string GetRoleDisplayName(string? role) => role switch
+    {
+        "User" => "کاربر عادی",
+        "Support" => "پشتیبان",
+        "Admin" => "مدیر سیستم",
+        _ => "نامشخص"
+    };
+}

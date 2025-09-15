@@ -28,11 +28,28 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/login";
         options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/access-denied";
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
         options.Cookie.Name = "QodraTickAuth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+
+        // Events for handling authentication redirects
+        options.Events.OnRedirectToLogin = context =>
+        {
+            // If this is an AJAX request, return 401 instead of redirecting
+            if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                context.Request.Headers["Content-Type"].ToString().Contains("application/json"))
+            {
+                context.Response.StatusCode = 401;
+                return Task.CompletedTask;
+            }
+
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        };
     });
 
 // Authorization Policies
@@ -46,7 +63,6 @@ builder.Services.AddAuthorization(options =>
 // Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>(); 
 
 // SignalR
 builder.Services.AddSignalR(options =>
@@ -90,6 +106,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Configure Render Modes - Mixed mode support
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
@@ -104,23 +121,39 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        // Delete and recreate database if needed
-        if (app.Environment.IsDevelopment())
+        // Apply pending migrations
+        if (dbContext.Database.GetPendingMigrations().Any())
         {
-            await dbContext.Database.EnsureDeletedAsync();
-            await dbContext.Database.EnsureCreatedAsync();
-            logger.LogInformation("دیتابیس با موفقیت ایجاد شد");
+            dbContext.Database.Migrate();
+            logger.LogInformation("Migration ها با موفقیت اجرا شدند");
         }
         else
         {
-            await dbContext.Database.MigrateAsync();
-            logger.LogInformation("Migration ها با موفقیت اجرا شدند");
+            logger.LogInformation("هیچ migration معلقی وجود ندارد");
         }
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "خطا در ایجاد یا migration دیتابیس");
-        throw; // Re-throw to prevent startup with bad database
+        logger.LogError(ex, "خطا در اجرای migration ها");
+
+        // In development, try to create database if it doesn't exist
+        if (app.Environment.IsDevelopment())
+        {
+            try
+            {
+                await dbContext.Database.EnsureCreatedAsync();
+                logger.LogInformation("دیتابیس جدید ایجاد شد");
+            }
+            catch (Exception createEx)
+            {
+                logger.LogError(createEx, "خطا در ایجاد دیتابیس");
+                throw;
+            }
+        }
+        else
+        {
+            throw;
+        }
     }
 }
 

@@ -1,10 +1,11 @@
 ﻿@page "/login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using System.Security.Claims
 @using System.ComponentModel.DataAnnotations
-@rendermode InteractiveServer
 @inject IUserService UserService
-@inject IAuthenticationService AuthService
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>ورود - قدرا تیک</PageTitle>
 
@@ -16,29 +17,30 @@
                 <small>سیستم مدیریت تیکت قدرا</small>
             </div>
             <div class="card-body">
-                <EditForm Model="@loginModel" OnValidSubmit="HandleLogin" FormName="LoginForm">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary class="alert alert-danger" />
 
-                    @if (!string.IsNullOrEmpty(errorMessage))
-                    {
-                        <div class="alert alert-danger">@errorMessage</div>
-                    }
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
 
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">@successMessage</div>
+                }
+
+                <form method="post" @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
                     <div class="mb-3">
                         <label class="form-label">نام کاربری</label>
-                        <InputText @bind-Value="loginModel.Username" class="form-control" placeholder="admin1" />
-                        <ValidationMessage For="@(() => loginModel.Username)" />
+                        <input type="text" class="form-control" placeholder="admin1" @bind="Username" required />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">رمز عبور</label>
-                        <InputText @bind-Value="loginModel.Password" type="password" class="form-control" placeholder="admin123" />
-                        <ValidationMessage For="@(() => loginModel.Password)" />
+                        <input type="password" class="form-control" placeholder="admin123" @bind="Password" required />
                     </div>
 
                     <div class="mb-3 form-check">
-                        <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" id="rememberMe" />
+                        <input type="checkbox" class="form-check-input" @bind="RememberMe" id="rememberMe" />
                         <label class="form-check-label" for="rememberMe">
                             مرا به خاطر بسپار
                         </label>
@@ -48,7 +50,7 @@
                         <button type="submit" class="btn btn-primary" disabled="@isLoading">
                             @if (isLoading)
                             {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                 <span>در حال ورود...</span>
                             }
                             else
@@ -58,7 +60,7 @@
                             }
                         </button>
                     </div>
-                </EditForm>
+                </form>
 
                 <hr class="my-4">
 
@@ -87,48 +89,73 @@
 </div>
 
 @code {
-    private LoginModel loginModel = new();
+    private string Username = string.Empty;
+    private string Password = string.Empty;
+    private bool RememberMe = false;
     private bool isLoading = false;
     private string errorMessage = string.Empty;
-
-    public class LoginModel
-    {
-        [Required(ErrorMessage = "نام کاربری الزامی است")]
-        public string Username { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "رمز عبور الزامی است")]
-        public string Password { get; set; } = string.Empty;
-
-        public bool RememberMe { get; set; } = false;
-    }
+    private string successMessage = string.Empty;
 
     private async Task HandleLogin()
     {
         isLoading = true;
         errorMessage = string.Empty;
+        successMessage = string.Empty;
 
         try
         {
-            // Validate user credentials
-            var user = await UserService.LoginAsync(loginModel.Username, loginModel.Password);
+            // Validate input
+            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+            {
+                errorMessage = "نام کاربری و رمز عبور الزامی است.";
+                return;
+            }
+
+            // Authenticate user
+            var user = await UserService.LoginAsync(Username, Password);
 
             if (user != null)
             {
-                // Clear client storage
-                await JSRuntime.InvokeVoidAsync("localStorage.clear");
-                await Task.Delay(100);
+                // Get actual HttpContext
+                var httpContext = HttpContextAccessor.HttpContext;
 
-                // Sign in using AuthenticationService
-                var success = await AuthService.SignInAsync(user, loginModel.RememberMe);
-
-                if (success)
+                if (httpContext != null)
                 {
-                    // Redirect to home page with force refresh
+                    // Create claims
+                    var claims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                        new Claim(ClaimTypes.Name, user.Username),
+                        new Claim(ClaimTypes.Email, user.Email),
+                        new Claim("DisplayName", user.DisplayName),
+                        new Claim(ClaimTypes.Role, user.Role.Name),
+                        new Claim("UserId", user.Id.ToString())
+                    };
+
+                    var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = RememberMe,
+                        ExpiresUtc = RememberMe ? DateTimeOffset.UtcNow.AddDays(7) : DateTimeOffset.UtcNow.AddHours(1)
+                    };
+
+                    // Sign in using real HttpContext
+                    await httpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        claimsPrincipal,
+                        authProperties);
+
+                    successMessage = "ورود موفقیت‌آمیز! در حال انتقال...";
+
+                    // Redirect after a short delay
+                    await Task.Delay(1500);
                     Navigation.NavigateTo("/", true);
                 }
                 else
                 {
-                    errorMessage = "خطا در ورود به سیستم. لطفاً دوباره تلاش کنید.";
+                    errorMessage = "خطا در دسترسی به HttpContext.";
                 }
             }
             else

@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.Cookies
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
+@inject IHttpContextAccessor HttpContextAccessor
 
 <div class="d-flex justify-content-center align-items-center min-vh-100">
     <div class="text-center">
@@ -11,10 +11,23 @@
         </div>
         <p class="mt-3 fs-5">در حال خروج از سیستم...</p>
         <small class="text-muted">لطفاً صبر کنید...</small>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success mt-3">@successMessage</div>
+        }
     </div>
 </div>
 
 @code {
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -22,35 +35,36 @@
             // Wait a moment for UI to show
             await Task.Delay(1000);
 
-            // Clear client-side storage
-            await JSRuntime.InvokeVoidAsync("localStorage.clear");
-            await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
+            // Get actual HttpContext
+            var httpContext = HttpContextAccessor.HttpContext;
 
-            // Create HttpContext for sign out
-            var httpContext = new DefaultHttpContext();
-            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-            // Clear any cookies
-            try
+            if (httpContext != null)
             {
-                await JSRuntime.InvokeVoidAsync("eval", @"
-                    document.cookie.split(';').forEach(function(c) {
-                        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
-                    });
-                ");
-            }
-            catch
-            {
-                // Ignore cookie clearing errors
-            }
+                // Sign out using real HttpContext
+                await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-            // Redirect to login
-            Navigation.NavigateTo("/login", true);
+                successMessage = "خروج موفقیت‌آمیز! در حال انتقال...";
+
+                // Wait a bit more to show success message
+                await Task.Delay(1500);
+
+                // Redirect to login
+                Navigation.NavigateTo("/login", true);
+            }
+            else
+            {
+                errorMessage = "خطا در دسترسی به HttpContext.";
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/login", true);
+            }
         }
         catch (Exception ex)
         {
+            errorMessage = $"خطا در خروج: {ex.Message}";
             Console.WriteLine($"Logout error: {ex.Message}");
+
             // Force navigation even if there's an error
+            await Task.Delay(2000);
             Navigation.NavigateTo("/login", true);
         }
     }
