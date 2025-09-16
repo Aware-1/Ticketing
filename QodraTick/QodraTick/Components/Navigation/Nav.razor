@@ -1,0 +1,355 @@
+﻿<!-- Navigation.razor -->
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <i class="bi bi-ticket-perforated me-2"></i>قدرا تیک
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                @if (currentUser != null)
+                {
+                    <!-- منوی عمومی -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="bi bi-house me-1"></i>داشبورد
+                        </a>
+                    </li>
+
+                    <!-- منوی کاربر عادی -->
+                    @if (currentUser.role == "User")
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tickets/create">
+                                <i class="bi bi-plus-circle me-1"></i>تیکت جدید
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tickets/my">
+                                <i class="bi bi-list-ul me-1"></i>تیکت‌های من
+                            </a>
+                        </li>
+                    }
+
+                    <!-- منوی پشتیبان -->
+                    @if (currentUser.role == "Support" || currentUser.role == "Admin")
+                    {
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-headset me-1"></i>پشتیبانی
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="/support/tickets">
+                                        <i class="bi bi-list me-1"></i>لیست تیکت‌ها
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/support/my-tickets">
+                                        <i class="bi bi-person-check me-1"></i>تیکت‌های من
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="/support/statistics">
+                                        <i class="bi bi-graph-up me-1"></i>آمار عملکرد
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+
+                    <!-- منوی مدیر -->
+                    @if (currentUser.role == "Admin")
+                    {
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-gear me-1"></i>مدیریت
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="/admin/dashboard">
+                                        <i class="bi bi-speedometer2 me-1"></i>داشبورد مدیریت
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/admin/users">
+                                        <i class="bi bi-people me-1"></i>مدیریت کاربران
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/admin/reports">
+                                        <i class="bi bi-file-earmark-bar-graph me-1"></i>گزارشات
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/admin/settings">
+                                        <i class="bi bi-sliders me-1"></i>تنظیمات سیستم
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                }
+            </ul>
+
+            <!-- منوی کاربر -->
+            <ul class="navbar-nav">
+                @if (currentUser != null)
+                {
+                    <!-- نوتیفیکیشن‌ها -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell"></i>
+                            @if (unreadNotifications > 0)
+                            {
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    @unreadNotifications
+                                </span>
+                            }
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                            <li><h6 class="dropdown-header">اعلان‌ها</h6></li>
+
+                            @if (notifications.Any())
+                            {
+                                @foreach (var notification in notifications.Take(5))
+                                {
+                                    <li>
+                                        <a class="dropdown-item @(notification.isRead ? "" : "fw-bold")" href="#">
+                                            <div class="d-flex align-items-start">
+                                                <i class="bi @GetNotificationIcon(notification.type) me-2 mt-1"></i>
+                                                <div>
+                                                    <div class="fw-semibold">@notification.title</div>
+                                                    <small class="text-muted">@notification.message</small>
+                                                    <br>
+                                                    <small class="text-muted">@FormatDateTime(notification.createdAt)</small>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                }
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center" href="/notifications">مشاهده همه</a></li>
+                            }
+                            else
+                            {
+                                <li><span class="dropdown-item-text text-muted">اعلانی وجود ندارد</span></li>
+                            }
+                        </ul>
+                    </li>
+
+                    <!-- منوی پروفایل -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>@currentUser.displayName
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">@currentUser.username</h6></li>
+                            <li>
+                                <span class="dropdown-item-text">
+                                    <small class="text-muted">نقش: @GetRoleDisplayName(currentUser.role)</small>
+                                </span>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="/profile">
+                                    <i class="bi bi-person me-1"></i>پروفایل من
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/profile/settings">
+                                    <i class="bi bi-gear me-1"></i>تنظیمات
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item text-danger" @onclick="HandleLogout" disabled="@isLoggingOut">
+                                    @if (isLoggingOut)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-box-arrow-right me-1"></i>
+                                    }
+                                    خروج
+                                </button>
+                            </li>
+                        </ul>
+                    </li>
+                }
+                else
+                {
+                    <!-- دکمه ورود -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>ورود
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private UserData? currentUser;
+    private bool isLoggingOut = false;
+    private int unreadNotifications = 0;
+    private List<NotificationData> notifications = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrentUser();
+        await LoadNotifications();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // بررسی دوره‌ای وضعیت کاربر
+            await JSRuntime.InvokeVoidAsync("setInterval", DotNetObjectReference.Create(this), 30000); // هر 30 ثانیه
+        }
+    }
+
+    private async Task LoadCurrentUser()
+    {
+        try
+        {
+            var userData = await JSRuntime.InvokeAsync<dynamic>("getCurrentUser");
+            if (userData != null)
+            {
+                currentUser = new UserData
+                {
+                    id = userData.id,
+                    username = userData.username,
+                    displayName = userData.displayName,
+                    email = userData.email,
+                    role = userData.role
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"خطا در بارگذاری اطلاعات کاربر: {ex.Message}");
+        }
+    }
+
+    private async Task LoadNotifications()
+    {
+        if (currentUser == null) return;
+
+        try
+        {
+            // فرض کنید API endpoint برای نوتیفیکیشن‌ها داریم
+            // اینجا sample data قرار می‌دهیم
+            notifications = new List<NotificationData>
+            {
+                new NotificationData { title = "تیکت جدید", message = "تیکت #123 ایجاد شد", type = "info", isRead = false, createdAt = DateTime.Now.AddMinutes(-5) },
+                new NotificationData { title = "پاسخ تیکت", message = "تیکت #122 پاسخ داده شد", type = "success", isRead = true, createdAt = DateTime.Now.AddMinutes(-15) }
+            };
+
+            unreadNotifications = notifications.Count(n => !n.isRead);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"خطا در بارگذاری نوتیفیکیشن‌ها: {ex.Message}");
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        if (isLoggingOut) return;
+
+        isLoggingOut = true;
+        StateHasChanged();
+
+        try
+        {
+            await JSRuntime.InvokeAsync<dynamic>("logout");
+            // ریدایرکت توسط JavaScript انجام می‌شود
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"خطا در خروج: {ex.Message}");
+            // در صورت خطا، ریدایرکت دستی
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        finally
+        {
+            isLoggingOut = false;
+        }
+    }
+
+    private string GetRoleDisplayName(string role)
+    {
+        return role switch
+        {
+            "Admin" => "مدیر سیستم",
+            "Support" => "پشتیبان",
+            "User" => "کاربر عادی",
+            _ => role
+        };
+    }
+
+    private string GetNotificationIcon(string type)
+    {
+        return type switch
+        {
+            "info" => "bi-info-circle text-info",
+            "success" => "bi-check-circle text-success",
+            "warning" => "bi-exclamation-triangle text-warning",
+            "error" => "bi-x-circle text-danger",
+            _ => "bi-bell text-primary"
+        };
+    }
+
+    private string FormatDateTime(DateTime dateTime)
+    {
+        var now = DateTime.Now;
+        var diff = now - dateTime;
+
+        if (diff.TotalMinutes < 1) return "همین الان";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} دقیقه پیش";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} ساعت پیش";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} روز پیش";
+
+        return dateTime.ToString("yyyy/MM/dd");
+    }
+
+    [JSInvokable]
+    public async Task RefreshUserData()
+    {
+        await LoadCurrentUser();
+        await LoadNotifications();
+        StateHasChanged();
+    }
+
+    public class UserData
+    {
+        public int id { get; set; }
+        public string username { get; set; } = string.Empty;
+        public string displayName { get; set; } = string.Empty;
+        public string email { get; set; } = string.Empty;
+        public string role { get; set; } = string.Empty;
+    }
+
+    public class NotificationData
+    {
+        public string title { get; set; } = string.Empty;
+        public string message { get; set; } = string.Empty;
+        public string type { get; set; } = string.Empty;
+        public bool isRead { get; set; }
+        public DateTime createdAt { get; set; }
+    }
+}

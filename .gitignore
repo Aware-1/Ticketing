@@ -193,9 +193,7 @@ nuget.exe
 #exclude node modules
 node_modules/
 
-wwwroot/*
-!wwwroot/custom/
-!wwwroot/custom/**
+wwwroot/lib/
 
 **/Localization/**/*.po
 

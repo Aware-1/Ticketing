@@ -97,6 +97,75 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { message = $"خطا در خروج: {ex.Message}" });
         }
     }
+
+    [HttpGet("validate")]
+    public async Task<IActionResult> ValidateToken()
+    {
+        try
+        {
+            var user = await _userService.GetCurrentUserAsync();
+
+            if (user != null && HttpContext.User.Identity?.IsAuthenticated == true)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    isValid = true,
+                    user = new
+                    {
+                        id = user.Id,
+                        username = user.Username,
+                        displayName = user.DisplayName,
+                        email = user.Email,
+                        role = user.Role.Name
+                    }
+                });
+            }
+            else
+            {
+                return Unauthorized(new { success = false, isValid = false, message = "Token نامعتبر است" });
+            }
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, error = $"خطا در اعتبارسنجی: {ex.Message}" });
+        }
+    }
+
+    [HttpGet("user-info")]
+    public async Task<IActionResult> GetCurrentUserInfo()
+    {
+        try
+        {
+            var user = await _userService.GetCurrentUserAsync();
+
+            if (user != null)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    user = new
+                    {
+                        id = user.Id,
+                        username = user.Username,
+                        displayName = user.DisplayName,
+                        email = user.Email,
+                        role = user.Role.Name,
+                        isActive = user.IsActive,
+                        createdAt = user.CreatedAt
+                    }
+                });
+            }
+            else
+            {
+                return Unauthorized(new { success = false, message = "کاربر یافت نشد" });
+            }
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, error = $"خطا در دریافت اطلاعات کاربر: {ex.Message}" });
+        }
+    }
 }
 
 public class LoginRequest

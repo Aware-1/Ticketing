@@ -1,10 +1,6 @@
 ﻿@page "/login"
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Authentication.Cookies
-@using System.Security.Claims
-@inject IUserService UserService
+@inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
-@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>ورود - قدرا تیک</PageTitle>
 
@@ -34,73 +30,91 @@
                         </div>
                     }
 
-                    <!-- ✅ فرم HTML خالص -->
-                    <form method="post" action="/login" @onsubmit="HandleSubmit" @onsubmit:preventDefault="false">
+                    <!-- Loading Spinner -->
+                    @if (isLoading)
+                    {
+                        <div class="text-center my-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">در حال ورود...</span>
+                            </div>
+                            <p class="mt-2 text-muted">در حال ورود به سیستم...</p>
+                        </div>
+                    }
 
+                    <!-- فرم ورود -->
+                    <form @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">
+                            <label for="username" class="form-label">
                                 <i class="bi bi-person me-1"></i>نام کاربری
                             </label>
-                            <input type="text" name="username" class="form-control form-control-lg"
-                                   placeholder="admin1" value="@Username" required />
+                            <input type="text" class="form-control" id="username"
+                                   @bind="Username" @bind:event="oninput"
+                                   placeholder="نام کاربری خود را وارد کنید"
+                                   disabled="@isLoading" required />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">
+                            <label for="password" class="form-label">
                                 <i class="bi bi-lock me-1"></i>رمز عبور
                             </label>
-                            <input type="password" name="password" class="form-control form-control-lg"
-                                   placeholder="admin123" value="@Password" required />
+                            <div class="position-relative">
+                                <input type="@(showPassword ? "text" : "password")"
+                                       class="form-control" id="password"
+                                       @bind="Password" @bind:event="oninput"
+                                       placeholder="رمز عبور خود را وارد کنید"
+                                       disabled="@isLoading" required />
+                                <button type="button" class="btn btn-outline-secondary position-absolute top-0 end-0 h-100 px-3"
+                                        @onclick="TogglePasswordVisibility" disabled="@isLoading">
+                                    <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="mb-4 form-check">
-                            <input type="checkbox" name="rememberMe" class="form-check-input"
-                                   id="rememberMe" checked="@RememberMe" />
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="rememberMe"
+                                   @bind="RememberMe" disabled="@isLoading" />
                             <label class="form-check-label" for="rememberMe">
-                                مرا به خاطر بسپار (7 روز)
+                                مرا به خاطر بسپار
                             </label>
                         </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-box-arrow-in-right me-2"></i>
-                                ورود به سیستم
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-box-arrow-in-right me-2"></i>ورود
                             </button>
                         </div>
                     </form>
 
-                    <hr class="my-4">
+                    <hr>
 
                     <!-- دکمه‌های تست سریع -->
                     <div class="text-center">
                         <h6 class="text-muted mb-3">تست سریع:</h6>
                         <div class="row g-1">
                             <div class="col-4">
-                                <form method="post" action="/login" style="display: inline;">
-                                    <input type="hidden" name="username" value="admin1" />
-                                    <input type="hidden" name="password" value="admin123" />
-                                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">
-                                        <i class="bi bi-shield me-1"></i>مدیر
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                        @onclick='() => QuickLogin("admin1", "admin123")'
+                                        disabled="@isLoading">
+                                    <i class="bi bi-shield me-1"></i>مدیر
+                                </button>
                             </div>
                             <div class="col-4">
-                                <form method="post" action="/login" style="display: inline;">
-                                    <input type="hidden" name="username" value="support1" />
-                                    <input type="hidden" name="password" value="support123" />
-                                    <button type="submit" class="btn btn-outline-info btn-sm w-100">
-                                        <i class="bi bi-headset me-1"></i>پشتیبان
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-outline-info btn-sm w-100"
+                                        @onclick='() => QuickLogin("support1", "support123")'
+                                        disabled="@isLoading">
+                                    <i class="bi bi-headset me-1"></i>پشتیبان
+                                </button>
                             </div>
                             <div class="col-4">
-                                <form method="post" action="/login" style="display: inline;">
-                                    <input type="hidden" name="username" value="user1" />
-                                    <input type="hidden" name="password" value="user123" />
-                                    <button type="submit" class="btn btn-outline-success btn-sm w-100">
-                                        <i class="bi bi-person me-1"></i>کاربر
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-outline-success btn-sm w-100"
+                                        @onclick='() => QuickLogin("user1", "user123")'
+                                        disabled="@isLoading">
+                                    <i class="bi bi-person me-1"></i>کاربر
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -111,107 +125,93 @@
 </div>
 
 @code {
-    // ✅ SSR - بدون rendermode
-
-    [SupplyParameterFromForm]
-    public string Username { get; set; } = string.Empty;
-
-    [SupplyParameterFromForm]
-    public string Password { get; set; } = string.Empty;
-
-    [SupplyParameterFromForm]
-    public bool RememberMe { get; set; } = false;
+    private string Username { get; set; } = string.Empty;
+    private string Password { get; set; } = string.Empty;
+    private bool RememberMe { get; set; } = false;
+    private bool showPassword = false;
+    private bool isLoading = false;
 
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        // اگر کاربر قبلاً لاگین کرده، redirect کن
-        var httpContext = HttpContextAccessor.HttpContext;
-        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        // بررسی اینکه کاربر قبلاً لاگین کرده
+        try
         {
-            Navigation.NavigateTo("/");
-            return;
+            var isAuth = await JSRuntime.InvokeAsync<bool>("isAuthenticated");
+            if (isAuth)
+            {
+                Navigation.NavigateTo("/");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            // اگر JS هنوز لود نشده، صبر می‌کنیم
+            Console.WriteLine($"JS not ready yet: {ex.Message}");
         }
     }
 
-    private async Task HandleSubmit()
+    private async Task HandleLogin()
     {
-        // این متد وقتی فرم submit میشه اجرا میشه
-        await ProcessLogin();
-    }
+        if (isLoading) return;
 
-    private async Task ProcessLogin()
-    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        {
+            errorMessage = "نام کاربری و رمز عبور الزامی است.";
+            return;
+        }
+
+        isLoading = true;
+        StateHasChanged();
+
         try
         {
-            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+            // استفاده از JavaScript برای لاگین
+            var loginResult = await JSRuntime.InvokeAsync<dynamic>("login", Username, Password, RememberMe);
+
+            if (loginResult?.success == true)
             {
-                errorMessage = "نام کاربری و رمز عبور الزامی است.";
-                return;
-            }
+                successMessage = "ورود موفقیت‌آمیز! در حال انتقال...";
+                StateHasChanged();
 
-            // Authenticate user
-            var user = await UserService.LoginAsync(Username, Password);
+                // کمی صبر برای نمایش پیام موفقیت
+                await Task.Delay(1500);
 
-            if (user != null)
-            {
-                var httpContext = HttpContextAccessor.HttpContext;
-                if (httpContext != null)
-                {
-                    // Create claims
-                    var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                        new Claim(ClaimTypes.Name, user.Username),
-                        new Claim(ClaimTypes.Email, user.Email),
-                        new Claim("DisplayName", user.DisplayName),
-                        new Claim(ClaimTypes.Role, user.Role.Name),
-                        new Claim("UserId", user.Id.ToString())
-                    };
-
-                    var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                    var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-
-                    var authProperties = new AuthenticationProperties
-                    {
-                        IsPersistent = RememberMe,
-                        ExpiresUtc = RememberMe ? DateTimeOffset.UtcNow.AddDays(7) : DateTimeOffset.UtcNow.AddHours(1),
-                        IssuedUtc = DateTimeOffset.UtcNow
-                    };
-
-                    // ✅ SignIn در SSR mode - این کار می‌کنه!
-                    await httpContext.SignInAsync(
-                        CookieAuthenticationDefaults.AuthenticationScheme,
-                        claimsPrincipal,
-                        authProperties);
-
-                    // Redirect to home
-                    Navigation.NavigateTo("/", true);
-                }
-                else
-                {
-                    errorMessage = "خطا در دسترسی به HttpContext.";
-                }
+                // انتقال به صفحه اصلی
+                Navigation.NavigateTo("/", forceLoad: true);
             }
             else
             {
-                errorMessage = "نام کاربری یا رمز عبور اشتباه است.";
+                errorMessage = loginResult?.error?.ToString() ?? "خطا در ورود به سیستم";
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"خطا در ورود: {ex.Message}";
+            Console.WriteLine($"Login error: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
-    // اگر فرم پست شده، پردازش کن
-    protected override async Task OnParametersSetAsync()
+    private async Task QuickLogin(string username, string password)
     {
-        if (!string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password))
-        {
-            await ProcessLogin();
-        }
+        Username = username;
+        Password = password;
+        RememberMe = false;
+        await HandleLogin();
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
     }
 }
