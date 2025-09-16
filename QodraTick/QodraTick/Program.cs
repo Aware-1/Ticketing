@@ -8,6 +8,10 @@ using Service.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ✅ Add Razor Components (Required for .NET 9)
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
 // ✅ Add Controllers support
 builder.Services.AddControllers();
 
@@ -122,7 +126,7 @@ app.UseAuthorization();
 // ✅ Map Controllers for API endpoints
 app.MapControllers();
 
-// Configure Render Modes - Mixed mode support
+// ✅ Configure Render Modes - Updated for .NET 9
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
