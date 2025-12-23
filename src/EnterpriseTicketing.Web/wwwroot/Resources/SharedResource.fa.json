@@ -1,0 +1,57 @@
+{
+  "Common": {
+    "Save": "ذخیره",
+    "Cancel": "انصراف",
+    "Edit": "ویرایش",
+    "Delete": "حذف",
+    "Submit": "ثبت",
+    "Error": "خطا",
+    "Success": "موفقیت",
+    "Warning": "هشدار",
+    "Info": "اطلاعات"
+  },
+  "Auth": {
+    "Login": "ورود",
+    "Register": "ثبت نام",
+    "Logout": "خروج",
+    "Email": "ایمیل",
+    "Password": "رمز عبور",
+    "ConfirmPassword": "تکرار رمز عبور",
+    "LoginFailed": "نام کاربری یا رمز عبور اشتباه است",
+    "LoginSuccess": "ورود با موفقیت انجام شد",
+    "RegisterSuccess": "ثبت نام با موفقیت انجام شد",
+    "LoginButton": "ورود",
+    "EmailRequired": "لطفا ایمیل خود را وارد کنید",
+    "EmailInvalid": "لطفا یک ایمیل معتبر وارد کنید",
+    "PasswordRequired": "لطفا رمز عبور خود را وارد کنید"
+  },
+  "Tickets": {
+    "Title": "عنوان",
+    "Description": "توضیحات",
+    "Status": "وضعیت",
+    "Priority": "اولویت",
+    "Category": "دسته بندی",
+    "AssignedTo": "محول شده به",
+    "CreatedBy": "ایجاد شده توسط",
+    "CreatedAt": "تاریخ ایجاد",
+    "UpdatedAt": "تاریخ بروزرسانی",
+    "Attachments": "ضمائم",
+    "Comments": "نظرات",
+    "AddComment": "افزودن نظر",
+    "AddAttachment": "افزودن فایل"
+  },
+  "Status": {
+    "New": "جدید",
+    "InProgress": "در حال بررسی",
+    "OnHold": "متوقف شده",
+    "Resolved": "حل شده",
+    "Closed": "بسته شده"
+  },
+  "Priority": {
+    "Low": "کم",
+    "Medium": "متوسط",
+    "High": "زیاد",
+    "Urgent": "فوری",
+    "Critical": "بحرانی"
+  }
+}

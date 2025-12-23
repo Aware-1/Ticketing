@@ -1,0 +1,160 @@
+@page "/auth/login"
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IHttpClientFactory HttpClientFactory
+@inject ILocalizationService Localization
+
+<PageTitle>@Localization.GetLocalizedString("Auth.Login")</PageTitle>
+
+<MudGrid Justify="Justify.Center" Class="mt-8">
+    <MudItem xs="12" sm="8" md="6" lg="4">
+        <MudPaper Elevation="3" Class="pa-8">
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-6">@Localization.GetLocalizedString("Auth.LoginTitle")</MudText>
+            <MudForm @ref="form" @bind-IsValid="@success">
+                <MudTextField T="string" Label="@Localization.GetLocalizedString("Auth.Email")"
+                    Required="true"
+                    RequiredError="@Localization.GetLocalizedString("Auth.EmailRequired")"
+                    Validation="@(new EmailAddressAttribute() {ErrorMessage = Localization.GetLocalizedString("Auth.EmailInvalid")})"
+                    Variant="Variant.Outlined"
+                    Class="mb-4"
+                    @bind-Value="loginModel.Email" />
+
+                <MudTextField T="string" Label="@Localization.GetLocalizedString("Auth.Password")"
+                    Required="true"
+                    RequiredError="@Localization.GetLocalizedString("Auth.PasswordRequired")"
+                    InputType="@(showPassword ? InputType.Text : InputType.Password)"
+                    Variant="Variant.Outlined"
+                    Class="mb-4"
+                    @bind-Value="loginModel.Password"
+                    Adornment="Adornment.End"
+                    AdornmentIcon="@(showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff)"
+                    OnAdornmentClick="() => showPassword = !showPassword" />
+
+                <div class="d-flex align-center justify-space-between mb-4">
+                    <MudCheckBox T="bool" 
+                               Label="@Localization.GetLocalizedString("Auth.RememberMe")" 
+                               Color="Color.Primary" 
+                               @bind-Checked="loginModel.RememberMe" />
+                    <MudLink Href="/auth/forgot-password" 
+                            Underline="Underline.Always">
+                        @Localization.GetLocalizedString("Auth.ForgotPassword")
+                    </MudLink>
+                </div>
+
+                <MudButton FullWidth="true"
+                    Color="Color.Primary"
+                    Variant="Variant.Filled"
+                    Size="Size.Large"
+                    OnClick="OnLoginClicked"
+                    Disabled="@(!success || isLoading)"
+                    DisableElevation="true"
+                    Class="mb-4">
+                    @if (isLoading)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">@Localization.GetLocalizedString("Auth.LoggingIn")</MudText>
+                    }
+                    else
+                    {
+                        <MudText>@Localization.GetLocalizedString("Auth.LoginButton")</MudText>
+                    }
+                </MudButton>
+
+                <MudDivider Class="mb-4" />
+
+                <MudText Align="Align.Center">
+                    @Localization.GetLocalizedString("Auth.NoAccount")
+                    <MudLink Href="/auth/register" 
+                            Underline="Underline.Always">
+                        @Localization.GetLocalizedString("Auth.Register")
+                    </MudLink>
+                </MudText>
+            </MudForm>
+        </MudPaper>
+
+        @if (showTestCredentials)
+        {
+            <MudExpansionPanel Class="mt-4">
+                <TitleContent>
+                    <div class="d-flex">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                        <MudText>@Localization.GetLocalizedString("Auth.TestCredentials")</MudText>
+                    </div>
+                </TitleContent>
+                <ChildContent>
+                    <MudList Dense="true">
+                        <MudListItem>
+                            <MudText>@Localization.GetLocalizedString("Auth.AdminCredentials")</MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText>@Localization.GetLocalizedString("Auth.AgentCredentials")</MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText>@Localization.GetLocalizedString("Auth.UserCredentials")</MudText>
+                        </MudListItem>
+                    </MudList>
+                </ChildContent>
+            </MudExpansionPanel>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    bool success;
+    bool showPassword;
+    bool isLoading;
+    bool showTestCredentials = true;
+    MudForm form;
+
+    private LoginModel loginModel = new();
+
+    private class LoginModel
+    {
+        public string Email { get; set; }
+        public string Password { get; set; }
+        public bool RememberMe { get; set; }
+    }
+
+    private async Task OnLoginClicked()
+    {
+        if (!success) return;
+
+        try
+        {
+            isLoading = true;
+            var client = HttpClientFactory.CreateClient("API");
+
+            var response = await client.PostAsJsonAsync("/api/auth/login", loginModel);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                if (result?.Token != null)
+                {
+                    ((CustomAuthStateProvider)AuthStateProvider).NotifyUserAuthentication(result.Token);
+                    NavigationManager.NavigateTo("/");
+                }
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add(Localization.GetLocalizedString("Auth.LoginFailed") + ": " + error, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(Localization.GetLocalizedString("Auth.ServerError"), Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private class LoginResponse
+    {
+        public string Token { get; set; }
+    }
+}

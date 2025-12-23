@@ -1,0 +1,56 @@
+{
+  "Common": {
+    "AppTitle": "Enterprise Ticketing System",
+  },
+  "Auth": {
+    "Login": "Login",
+    "Register": "Register",
+    "Email": "Email",
+    "Password": "Password",
+    "EmailRequired": "Email is required",
+    "EmailInvalid": "Please enter a valid email address",
+    "PasswordRequired": "Password is required",
+    "LoginButton": "Login",
+    "LoginFailed": "Login failed. Please check your credentials.",
+    "RegisterButton": "Register",
+    "Loading": "Loading...",
+    "Error": "Error",
+    "Success": "Success",
+    "Warning": "Warning",
+    "Info": "Information"
+  },
+  "Nav": {
+    "Dashboard": "Dashboard",
+    "Tickets": "Tickets",
+    "Reports": "Reports",
+    "Settings": "Settings",
+    "Users": "Users",
+    "Departments": "Departments",
+    "SLA": "SLA Management"
+  },
+  "Tickets": {
+    "Title": "My Tickets",
+    "NewTicket": "New Ticket",
+    "Search": "Search tickets...",
+    "Priority": {
+      "Low": "Low",
+      "Medium": "Medium",
+      "High": "High",
+      "Critical": "Critical"
+    },
+    "Status": {
+      "New": "New",
+      "Assigned": "Assigned",
+      "InProgress": "In Progress",
+      "OnHold": "On Hold",
+      "Resolved": "Resolved",
+      "Closed": "Closed"
+    },
+    "Actions": {
+      "Edit": "Edit",
+      "Delete": "Delete",
+      "Close": "Close",
+      "Reopen": "Reopen"
+    }
+  }
+}

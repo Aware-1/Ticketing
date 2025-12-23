@@ -1,0 +1,72 @@
+{
+  "Auth": {
+    "Login": "Login",
+    "LoginTitle": "Login to Ticketing System",
+    "Email": "Email",
+    "Password": "Password",
+    "EmailRequired": "Email is required",
+    "EmailInvalid": "Invalid email address",
+    "PasswordRequired": "Password is required",
+    "RememberMe": "Remember me",
+    "ForgotPassword": "Forgot password?",
+    "Register": "Register",
+    "NoAccount": "Don't have an account?",
+    "LoginButton": "Login",
+    "LoggingIn": "Logging in...",
+    "LoginFailed": "Login failed",
+    "ServerError": "Server connection error",
+    "TestCredentials": "Test Credentials",
+    "AdminCredentials": "Admin: admin@test.com / Admin@123",
+    "AgentCredentials": "Agent: agent@test.com / Agent@123",
+    "UserCredentials": "User: user@test.com / User@123"
+  },
+  "Validation": {
+    "Required": "This field is required",
+    "InvalidEmail": "Invalid email address"
+  },
+  "Common": {
+    "Loading": "Loading...",
+    "Error": "Error",
+    "Success": "Success",
+    "Cancel": "Cancel",
+    "Save": "Save",
+    "Edit": "Edit",
+    "Delete": "Delete",
+    "Create": "Create",
+    "Search": "Search",
+    "NoData": "No data found"
+  },
+  "Dashboard": {
+    "Title": "Dashboard",
+    "Welcome": "Welcome",
+    "TotalTickets": "Total Tickets",
+    "PendingTickets": "Pending Tickets",
+    "SLABreaches": "SLA Breaches",
+    "ResolvedToday": "Resolved Today",
+    "RecentTickets": "Recent Tickets",
+    "SLAPerformance": "SLA Performance",
+    "YourTickets": "Your Tickets"
+  },
+  "Ticket": {
+    "Id": "ID",
+    "Title": "Title",
+    "Status": "Status",
+    "CreatedAt": "Created At",
+    "Status.Open": "Open",
+    "Status.InProgress": "In Progress",
+    "Status.Resolved": "Resolved",
+    "Status.Closed": "Closed",
+    "Create": "Create New Ticket"
+  },
+  "Menu": {
+    "Dashboard": "Dashboard",
+    "Tickets": "Tickets",
+    "Reports": "Reports",
+    "Settings": "Settings",
+    "Users": "Users",
+    "Profile": "Profile",
+    "Logout": "Logout",
+    "Management": "Management",
+    "SLA": "SLA"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "Common": {
+    "AppTitle": "سیستم تیکتینگ سازمانی",
+  },
+  "Auth": {
+    "Login": "ورود",
+    "Register": "ثبت‌نام",
+    "Email": "ایمیل",
+    "Password": "رمز عبور",
+    "EmailRequired": "ایمیل الزامی است",
+    "EmailInvalid": "لطفاً یک ایمیل معتبر وارد کنید",
+    "PasswordRequired": "رمز عبور الزامی است",
+    "LoginButton": "ورود به سیستم",
+    "LoginFailed": "ورود ناموفق. لطفاً اطلاعات خود را بررسی کنید.",
+    "RegisterButton": "ثبت‌نام",
+    "Loading": "در حال بارگذاری...",
+    "Error": "خطا",
+    "Success": "موفقیت",
+    "Warning": "هشدار",
+    "Info": "اطلاعات"
+  },
+  "Nav": {
+    "Dashboard": "داشبورد",
+    "Tickets": "تیکت‌ها",
+    "Reports": "گزارش‌ها",
+    "Settings": "تنظیمات",
+    "Users": "کاربران",
+    "Departments": "دپارتمان‌ها",
+    "SLA": "مدیریت SLA"
+  },
+  "Tickets": {
+    "Title": "تیکت‌های من",
+    "NewTicket": "تیکت جدید",
+    "Search": "جستجوی تیکت‌ها...",
+    "Priority": {
+      "Low": "کم",
+      "Medium": "متوسط",
+      "High": "بالا",
+      "Critical": "بحرانی"
+    },
+    "Status": {
+      "New": "جدید",
+      "Assigned": "ارجاع شده",
+      "InProgress": "در حال بررسی",
+      "OnHold": "معلق",
+      "Resolved": "حل شده",
+      "Closed": "بسته شده"
+    },
+    "Actions": {
+      "Edit": "ویرایش",
+      "Delete": "حذف",
+      "Close": "بستن",
+      "Reopen": "بازگشایی"
+    }
+  }
+}

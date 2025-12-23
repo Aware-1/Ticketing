@@ -1,0 +1,72 @@
+{
+  "Auth": {
+    "Login": "ورود به سیستم",
+    "LoginTitle": "ورود به سیستم تیکتینگ",
+    "Email": "ایمیل",
+    "Password": "رمز عبور",
+    "EmailRequired": "ایمیل الزامی است",
+    "EmailInvalid": "ایمیل معتبر نیست",
+    "PasswordRequired": "رمز عبور الزامی است",
+    "RememberMe": "مرا به خاطر بسپار",
+    "ForgotPassword": "رمز عبور را فراموش کرده‌ام",
+    "Register": "ثبت نام",
+    "NoAccount": "حساب کاربری ندارید؟",
+    "LoginButton": "ورود به سیستم",
+    "LoggingIn": "در حال ورود...",
+    "LoginFailed": "ورود ناموفق",
+    "ServerError": "خطا در ارتباط با سرور",
+    "TestCredentials": "اطلاعات تست",
+    "AdminCredentials": "مدیر: admin@test.com / Admin@123",
+    "AgentCredentials": "کارشناس: agent@test.com / Agent@123",
+    "UserCredentials": "کاربر: user@test.com / User@123"
+  },
+  "Validation": {
+    "Required": "این فیلد الزامی است",
+    "InvalidEmail": "ایمیل معتبر نیست"
+  },
+  "Common": {
+    "Loading": "در حال بارگذاری...",
+    "Error": "خطا",
+    "Success": "عملیات موفق",
+    "Cancel": "انصراف",
+    "Save": "ذخیره",
+    "Edit": "ویرایش",
+    "Delete": "حذف",
+    "Create": "ایجاد",
+    "Search": "جستجو",
+    "NoData": "اطلاعاتی یافت نشد"
+  },
+  "Dashboard": {
+    "Title": "داشبورد",
+    "Welcome": "خوش آمدید",
+    "TotalTickets": "کل تیکت‌ها",
+    "PendingTickets": "تیکت‌های در انتظار",
+    "SLABreaches": "موارد نقض SLA",
+    "ResolvedToday": "حل شده امروز",
+    "RecentTickets": "تیکت‌های اخیر",
+    "SLAPerformance": "عملکرد SLA",
+    "YourTickets": "تیکت‌های شما"
+  },
+  "Ticket": {
+    "Id": "شناسه",
+    "Title": "عنوان",
+    "Status": "وضعیت",
+    "CreatedAt": "تاریخ ایجاد",
+    "Status.Open": "باز",
+    "Status.InProgress": "در حال بررسی",
+    "Status.Resolved": "حل شده",
+    "Status.Closed": "بسته شده",
+    "Create": "ایجاد تیکت جدید"
+  },
+  "Menu": {
+    "Dashboard": "داشبورد",
+    "Tickets": "تیکت‌ها",
+    "Reports": "گزارشات",
+    "Settings": "تنظیمات",
+    "Users": "کاربران",
+    "Profile": "پروفایل",
+    "Logout": "خروج",
+    "Management": "مدیریت",
+    "SLA": "SLA"
+  }
+}

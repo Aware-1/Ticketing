@@ -1,0 +1,208 @@
+@page "/"
+@attribute [Authorize]
+@inject ILocalizationService Localization
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>@Localization.GetLocalizedString("Dashboard.Title")</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudText Typo="Typo.h4" Class="mb-4">@Localization.GetLocalizedString("Dashboard.Welcome")</MudText>
+    </MudItem>
+
+    <AuthorizeView Roles="Admin,Agent">
+        <Authorized>
+            <!-- Summary Cards -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-4" Style="height: 100%;">
+                    <MudStack>
+                        <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Color="Color.Primary" Style="font-size: 3rem;" />
+                        <div>
+                            <MudText Typo="Typo.h5">@_totalTickets</MudText>
+                            <MudText>@Localization.GetLocalizedString("Dashboard.TotalTickets")</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-4" Style="height: 100%;">
+                    <MudStack>
+                        <MudIcon Icon="@Icons.Material.Filled.PendingActions" Color="Color.Warning" Style="font-size: 3rem;" />
+                        <div>
+                            <MudText Typo="Typo.h5">@_pendingTickets</MudText>
+                            <MudText>@Localization.GetLocalizedString("Dashboard.PendingTickets")</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-4" Style="height: 100%;">
+                    <MudStack>
+                        <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Error" Style="font-size: 3rem;" />
+                        <div>
+                            <MudText Typo="Typo.h5">@_slaBreaches</MudText>
+                            <MudText>@Localization.GetLocalizedString("Dashboard.SLABreaches")</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-4" Style="height: 100%;">
+                    <MudStack>
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Style="font-size: 3rem;" />
+                        <div>
+                            <MudText Typo="Typo.h5">@_resolvedToday</MudText>
+                            <MudText>@Localization.GetLocalizedString("Dashboard.ResolvedToday")</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Recent Tickets -->
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-4">@Localization.GetLocalizedString("Dashboard.RecentTickets")</MudText>
+                    <MudTable Items="@_recentTickets" Hover="true" Striped="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>@Localization.GetLocalizedString("Ticket.Id")</MudTh>
+                            <MudTh>@Localization.GetLocalizedString("Ticket.Title")</MudTh>
+                            <MudTh>@Localization.GetLocalizedString("Ticket.Status")</MudTh>
+                            <MudTh>@Localization.GetLocalizedString("Ticket.CreatedAt")</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Id</MudTd>
+                            <MudTd>@context.Title</MudTd>
+                            <MudTd>
+                                <MudChip Color="@GetStatusColor(context.Status)" Size="Size.Small">
+                                    @Localization.GetLocalizedString($"Ticket.Status.{context.Status}")
+                                </MudChip>
+                            </MudTd>
+                            <MudTd>@context.CreatedAt.ToShortDateString()</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudPaper>
+            </MudItem>
+
+            <!-- SLA Performance -->
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-4">@Localization.GetLocalizedString("Dashboard.SLAPerformance")</MudText>
+                    <MudChart ChartType="ChartType.Donut" InputData="@_slaData" InputLabels="@_slaLabels" Width="300px" Height="300px" />
+                </MudPaper>
+            </MudItem>
+        </Authorized>
+        <NotAuthorized>
+            <!-- User View -->
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-4">@Localization.GetLocalizedString("Dashboard.YourTickets")</MudText>
+                    <MudTable Items="@_userTickets" Hover="true" Striped="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>@Localization.GetLocalizedString("Ticket.Id")</MudTh>
+                            <MudTh>@Localization.GetLocalizedString("Ticket.Title")</MudTh>
+                            <MudTh>@Localization.GetLocalizedString("Ticket.Status")</MudTh>
+                            <MudTh>@Localization.GetLocalizedString("Ticket.CreatedAt")</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Id</MudTd>
+                            <MudTd>@context.Title</MudTd>
+                            <MudTd>
+                                <MudChip Color="@GetStatusColor(context.Status)" Size="Size.Small">
+                                    @Localization.GetLocalizedString($"Ticket.Status.{context.Status}")
+                                </MudChip>
+                            </MudTd>
+                            <MudTd>@context.CreatedAt.ToShortDateString()</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4">
+                    <MudButton Color="Color.Primary" 
+                              Variant="Variant.Filled" 
+                              StartIcon="@Icons.Material.Filled.Add"
+                              OnClick="@(() => NavigationManager.NavigateTo("/tickets/create"))">
+                        @Localization.GetLocalizedString("Ticket.Create")
+                    </MudButton>
+                </MudPaper>
+            </MudItem>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudGrid>
+
+@code {
+    private int _totalTickets;
+    private int _pendingTickets;
+    private int _slaBreaches;
+    private int _resolvedToday;
+    private List<TicketSummary> _recentTickets = new();
+    private List<TicketSummary> _userTickets = new();
+    private double[] _slaData = { 75, 20, 5 };
+    private string[] _slaLabels = { "Within SLA", "At Risk", "Breached" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("API");
+            
+            // TODO: Implement API calls to get dashboard data
+            _totalTickets = 150;
+            _pendingTickets = 45;
+            _slaBreaches = 8;
+            _resolvedToday = 12;
+
+            // Sample data for testing
+            _recentTickets = new List<TicketSummary>
+            {
+                new() { Id = "TKT-001", Title = "نمونه تیکت 1", Status = TicketStatus.Open, CreatedAt = DateTime.Now.AddDays(-1) },
+                new() { Id = "TKT-002", Title = "نمونه تیکت 2", Status = TicketStatus.InProgress, CreatedAt = DateTime.Now.AddDays(-2) },
+                new() { Id = "TKT-003", Title = "نمونه تیکت 3", Status = TicketStatus.Resolved, CreatedAt = DateTime.Now.AddDays(-3) }
+            };
+
+            _userTickets = new List<TicketSummary>
+            {
+                new() { Id = "TKT-004", Title = "تیکت کاربر 1", Status = TicketStatus.Open, CreatedAt = DateTime.Now.AddDays(-1) },
+                new() { Id = "TKT-005", Title = "تیکت کاربر 2", Status = TicketStatus.Closed, CreatedAt = DateTime.Now.AddDays(-5) }
+            };
+        }
+        catch (Exception)
+        {
+            // TODO: Handle errors
+        }
+    }
+
+    private Color GetStatusColor(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => Color.Info,
+        TicketStatus.InProgress => Color.Warning,
+        TicketStatus.Resolved => Color.Success,
+        TicketStatus.Closed => Color.Dark,
+        _ => Color.Default
+    };
+
+    private class TicketSummary
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public TicketStatus Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    private enum TicketStatus
+    {
+        Open,
+        InProgress,
+        Resolved,
+        Closed
+    }
+}

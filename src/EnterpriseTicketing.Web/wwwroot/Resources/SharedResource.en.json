@@ -1,0 +1,57 @@
+{
+  "Common": {
+    "Save": "Save",
+    "Cancel": "Cancel",
+    "Edit": "Edit",
+    "Delete": "Delete",
+    "Submit": "Submit",
+    "Error": "Error",
+    "Success": "Success",
+    "Warning": "Warning",
+    "Info": "Info"
+  },
+  "Auth": {
+    "Login": "Login",
+    "Register": "Register",
+    "Logout": "Logout",
+    "Email": "Email",
+    "Password": "Password",
+    "ConfirmPassword": "Confirm Password",
+    "LoginFailed": "Invalid username or password",
+    "LoginSuccess": "Login successful",
+    "RegisterSuccess": "Registration successful",
+    "LoginButton": "Login",
+    "EmailRequired": "Email is required",
+    "EmailInvalid": "Please enter a valid email",
+    "PasswordRequired": "Password is required"
+  },
+  "Tickets": {
+    "Title": "Title",
+    "Description": "Description",
+    "Status": "Status",
+    "Priority": "Priority",
+    "Category": "Category",
+    "AssignedTo": "Assigned To",
+    "CreatedBy": "Created By",
+    "CreatedAt": "Created At",
+    "UpdatedAt": "Updated At",
+    "Attachments": "Attachments",
+    "Comments": "Comments",
+    "AddComment": "Add Comment",
+    "AddAttachment": "Add Attachment"
+  },
+  "Status": {
+    "New": "New",
+    "InProgress": "In Progress",
+    "OnHold": "On Hold",
+    "Resolved": "Resolved",
+    "Closed": "Closed"
+  },
+  "Priority": {
+    "Low": "Low",
+    "Medium": "Medium",
+    "High": "High",
+    "Urgent": "Urgent",
+    "Critical": "Critical"
+  }
+}
